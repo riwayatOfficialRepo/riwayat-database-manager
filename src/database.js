@@ -1,38 +1,9 @@
-import { Pool, PoolConfig, QueryResult, PoolClient } from 'pg';
-import path from 'path';
-import dotenv from 'dotenv';
-
-// Load .env from project root
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-// Types
-interface ConnectionStats {
-  acquired: number;
-  released: number;
-  created: number;
-  removed: number;
-}
-
-interface PoolStats {
-  total: number;
-  active: number;
-  idle: number;
-  waiting: number;
-  max: number;
-  usage: string;
-  stats: ConnectionStats;
-}
-
-interface HealthCheckResponse {
-  status: 'healthy' | 'unhealthy';
-  database: 'connected' | 'disconnected';
-  connections?: PoolStats;
-  error?: string;
-  timestamp: string;
-}
+const { Pool } = require('pg');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
 // Hybrid Database configuration
-const dbConfig: PoolConfig = process.env.POSTGRES_URL
+const dbConfig = process.env.POSTGRES_URL
   ? {
       connectionString: process.env.POSTGRES_URL,
       ssl: { rejectUnauthorized: false },
@@ -57,25 +28,27 @@ const pool = new Pool(dbConfig);
 
 // Connection monitoring
 class ConnectionMonitor {
-  private totalConnections: number = 0;
-  private activeConnections: number = 0;
-  private idleConnections: number = 0;
-  private waitingClients: number = 0;
-  private connectionStats: ConnectionStats = {
-    acquired: 0,
-    released: 0,
-    created: 0,
-    removed: 0,
-  };
+  constructor() {
+    this.totalConnections = 0;
+    this.activeConnections = 0;
+    this.idleConnections = 0;
+    this.waitingClients = 0;
+    this.connectionStats = {
+      acquired: 0,
+      released: 0,
+      created: 0,
+      removed: 0,
+    };
+  }
 
-  updateStats(): void {
+  updateStats() {
     this.totalConnections = pool.totalCount;
     this.idleConnections = pool.idleCount;
     this.activeConnections = pool.totalCount - pool.idleCount;
     this.waitingClients = pool.waitingCount;
   }
 
-  getStats(): PoolStats {
+  getStats() {
     this.updateStats();
     return {
       total: this.totalConnections,
@@ -88,7 +61,7 @@ class ConnectionMonitor {
     };
   }
 
-  logStats(): void {
+  logStats() {
     const stats = this.getStats();
     console.log('📊 Database Connection Stats:', {
       active: `${stats.active}/${stats.max}`,
@@ -98,19 +71,19 @@ class ConnectionMonitor {
     });
   }
 
-  incrementAcquired(): void {
+  incrementAcquired() {
     this.connectionStats.acquired++;
   }
 
-  incrementReleased(): void {
+  incrementReleased() {
     this.connectionStats.released++;
   }
 
-  incrementCreated(): void {
+  incrementCreated() {
     this.connectionStats.created++;
   }
 
-  incrementRemoved(): void {
+  incrementRemoved() {
     this.connectionStats.removed++;
   }
 }
@@ -120,13 +93,13 @@ const monitor = new ConnectionMonitor();
 
 // Instrument the pool to track connections
 const originalQuery = pool.query.bind(pool);
-pool.query = function (queryTextOrConfig: any, values?: any): any {
+pool.query = function (queryTextOrConfig, values) {
   monitor.incrementAcquired();
   monitor.updateStats();
 
   const startTime = Date.now();
   return originalQuery(queryTextOrConfig, values)
-    .then((result: any) => {
+    .then((result) => {
       monitor.incrementReleased();
       monitor.updateStats();
 
@@ -143,21 +116,21 @@ pool.query = function (queryTextOrConfig: any, values?: any): any {
 
       return result;
     })
-    .catch((error: Error) => {
+    .catch((error) => {
       monitor.incrementReleased();
       monitor.updateStats();
       throw error;
     });
-} as typeof pool.query;
+};
 
 // Track connection lifecycle
-pool.on('connect', (client: PoolClient) => {
+pool.on('connect', () => {
   monitor.incrementCreated();
   monitor.updateStats();
   console.log('🔗 New database connection created');
 });
 
-pool.on('acquire', (client: PoolClient) => {
+pool.on('acquire', () => {
   monitor.incrementAcquired();
   monitor.updateStats();
 });
@@ -167,14 +140,14 @@ pool.on('release', () => {
   monitor.updateStats();
 });
 
-pool.on('remove', (client: PoolClient) => {
+pool.on('remove', () => {
   monitor.incrementRemoved();
   monitor.updateStats();
   console.log('🗑️ Database connection removed');
 });
 
 // Test database connection
-const connectDB = async (): Promise<Pool> => {
+const connectDB = async () => {
   try {
     const client = await pool.connect();
     console.log('✅ PostgreSQL database connected successfully');
@@ -195,14 +168,14 @@ const connectDB = async (): Promise<Pool> => {
 };
 
 // Handle pool errors
-pool.on('error', (err: Error) => {
+pool.on('error', (err) => {
   console.error('❌ Unexpected error on idle client', err);
   monitor.updateStats();
 });
 
 // Export monitoring functions
-const getConnectionStats = (): PoolStats => monitor.getStats();
-const logConnectionStats = (): void => monitor.logStats();
+const getConnectionStats = () => monitor.getStats();
+const logConnectionStats = () => monitor.logStats();
 
 // Auto-log stats every 30 seconds (optional)
 if (process.env.NODE_ENV === 'development') {
@@ -225,7 +198,7 @@ process.on('SIGINT', async () => {
 });
 
 // Health check endpoint helper
-const healthCheck = async (): Promise<HealthCheckResponse> => {
+const healthCheck = async () => {
   try {
     const stats = monitor.getStats();
     await pool.query('SELECT 1 as health_check');
@@ -247,19 +220,7 @@ const healthCheck = async (): Promise<HealthCheckResponse> => {
   }
 };
 
-export {
-  connectDB,
-  pool,
-  getConnectionStats,
-  logConnectionStats,
-  healthCheck,
-  PoolStats,
-  HealthCheckResponse,
-  ConnectionStats,
-};
-
-// Default export for convenience
-export default {
+module.exports = {
   connectDB,
   pool,
   query: pool.query.bind(pool),
