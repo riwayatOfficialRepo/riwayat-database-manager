@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const path = require('path');
+const logger = require('./logger');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
 
 // Hybrid Database configuration
@@ -220,10 +221,24 @@ const healthCheck = async () => {
   }
 };
 
+// Execute query helper with logging
+const execute = async (sql, params = [], client = null) => {
+  const db = client || pool;
+  try {
+    logger.debug({ sql, params }, 'Executing SQL');
+    const { rows } = await db.query(sql, params);
+    return rows;
+  } catch (error) {
+    logger.error({ error, sql, params }, 'Database error');
+    throw error;
+  }
+};
+
 module.exports = {
   connectDB,
   pool,
   query: pool.query.bind(pool),
+  execute,
   getConnectionStats,
   logConnectionStats,
   healthCheck,

@@ -17,6 +17,8 @@
   "description": "PostgreSQL database service with connection pooling and monitoring",
   "dependencies": {
     "dotenv": "^17.2.3",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "pino": "^10.2.1",
+    "pino-pretty": "^13.1.3"
   }
 }
