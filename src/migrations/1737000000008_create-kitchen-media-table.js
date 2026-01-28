@@ -5,11 +5,7 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('uuid_generate_v4()'),
     },
-    kitchen_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'kitchens(id)',
-    },
+    kitchen_id: { type: 'uuid', notNull: true },
     media_type: { type: 'varchar(20)', notNull: true },
     s3_key_original: { type: 'text' },
     s3_key_processed: { type: 'text' },
@@ -24,9 +20,18 @@ exports.up = (pgm) => {
     s3_key_logo: { type: 'varchar(255)' },
     caption: { type: 'text' },
     media_name: { type: 'varchar(255)' },
-  });
+  }, { ifNotExists: true });
+
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchen_media
+        ADD CONSTRAINT fk_kitchen
+        FOREIGN KEY (kitchen_id) REFERENCES kitchens(id);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('kitchen_media');
+  pgm.dropTable('kitchen_media', { ifExists: true });
 };

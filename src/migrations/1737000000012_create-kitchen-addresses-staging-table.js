@@ -5,17 +5,8 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('uuid_generate_v4()'),
     },
-    kitchen_address_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'kitchen_addresses(id)',
-      onDelete: 'CASCADE',
-    },
-    kitchen_staging_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'kitchens_staging(id)',
-    },
+    kitchen_address_id: { type: 'uuid', notNull: true },
+    kitchen_staging_id: { type: 'uuid', notNull: true },
     address_name: { type: 'text' },
     address_line1: { type: 'text' },
     address_line2: { type: 'text' },
@@ -36,9 +27,27 @@ exports.up = (pgm) => {
     status: { type: 'text', default: 'draft' },
     updated_at: { type: 'timestamp', default: pgm.func('now()') },
     is_record_changed: { type: 'boolean', default: false },
-  });
+  }, { ifNotExists: true });
+
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchen_addresses_staging
+        ADD CONSTRAINT kitchen_addresses_staging_kitchen_address_id_fkey
+        FOREIGN KEY (kitchen_address_id) REFERENCES kitchen_addresses(id) ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchen_addresses_staging
+        ADD CONSTRAINT kitchen_addresses_staging_kitchen_staging_id_fkey
+        FOREIGN KEY (kitchen_staging_id) REFERENCES kitchens_staging(id);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('kitchen_addresses_staging');
+  pgm.dropTable('kitchen_addresses_staging', { ifExists: true });
 };

@@ -8,8 +8,6 @@ exports.up = (pgm) => {
     kitchen_id: {
       type: 'uuid',
       notNull: true,
-      references: 'kitchens(id)',
-      onDelete: 'CASCADE',
     },
     name: { type: 'text', notNull: true },
     tagline: { type: 'text' },
@@ -25,15 +23,27 @@ exports.up = (pgm) => {
       default: 'TEMP-REF',
     },
     activated_at: { type: 'timestamp' },
-  });
+  }, { ifNotExists: true });
 
-  pgm.addConstraint('kitchens_staging', 'unique_kitchen_staging_name', {
-    unique: ['name'],
-  });
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchens_staging
+        ADD CONSTRAINT kitchens_staging_kitchen_id_fkey
+        FOREIGN KEY (kitchen_id) REFERENCES kitchens(id) ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 
-  pgm.createIndex('kitchens_staging', 'kitchen_id', { unique: true });
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchens_staging ADD CONSTRAINT unique_kitchen_staging_name UNIQUE (name);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
+  pgm.sql('CREATE UNIQUE INDEX IF NOT EXISTS kitchens_staging_kitchen_id_idx ON kitchens_staging (kitchen_id)');
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('kitchens_staging');
+  pgm.dropTable('kitchens_staging', { ifExists: true });
 };

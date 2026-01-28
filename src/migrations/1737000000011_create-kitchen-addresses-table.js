@@ -5,12 +5,7 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('uuid_generate_v4()'),
     },
-    kitchen_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'kitchens(id)',
-      onDelete: 'CASCADE',
-    },
+    kitchen_id: { type: 'uuid', notNull: true },
     address_name: { type: 'text' },
     address_line1: { type: 'text' },
     address_line2: { type: 'text' },
@@ -31,9 +26,18 @@ exports.up = (pgm) => {
     deleted_at: { type: 'timestamp' },
     status: { type: 'text', default: 'draft' },
     is_record_changed: { type: 'boolean', default: false },
-  });
+  }, { ifNotExists: true });
+
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchen_addresses
+        ADD CONSTRAINT fk_kitchen_addresses_kitchen_id
+        FOREIGN KEY (kitchen_id) REFERENCES kitchens(id) ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('kitchen_addresses');
+  pgm.dropTable('kitchen_addresses', { ifExists: true });
 };

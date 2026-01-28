@@ -22,13 +22,16 @@ exports.up = (pgm) => {
       unique: true,
     },
     activated_at: { type: 'timestamp' },
-  });
+  }, { ifNotExists: true });
 
-  pgm.addConstraint('kitchens', 'unique_kitchen_name', {
-    unique: ['name'],
-  });
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE kitchens ADD CONSTRAINT unique_kitchen_name UNIQUE (name);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('kitchens');
+  pgm.dropTable('kitchens', { ifExists: true });
 };
