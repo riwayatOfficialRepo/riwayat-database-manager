@@ -5,6 +5,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node src/index.js",
+    "migrate": "node-pg-migrate up -m src/migrations",
+    "migrate:down": "node-pg-migrate down -m src/migrations",
+    "migrate:create": "node-pg-migrate create -m src/migrations",
+    "migrate:redo": "node-pg-migrate redo -m src/migrations",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -17,6 +21,7 @@
   "description": "PostgreSQL database service with connection pooling and monitoring",
   "dependencies": {
     "dotenv": "^17.2.3",
+    "node-pg-migrate": "^8.0.4",
     "pg": "^8.16.3",
     "pino": "^10.2.1",
     "pino-pretty": "^13.1.3"
