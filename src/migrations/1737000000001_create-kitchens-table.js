@@ -26,8 +26,9 @@ exports.up = (pgm) => {
 
   pgm.sql(`
     DO $$ BEGIN
-      ALTER TABLE kitchens ADD CONSTRAINT unique_kitchen_name UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_kitchen_name') THEN
+        ALTER TABLE kitchens ADD CONSTRAINT unique_kitchen_name UNIQUE (name);
+      END IF;
     END $$;
   `);
 };

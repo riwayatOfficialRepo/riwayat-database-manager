@@ -9,13 +9,15 @@
     "migrate:down": "node-pg-migrate down -m src/migrations",
     "migrate:create": "node-pg-migrate create -m src/migrations",
     "migrate:redo": "node-pg-migrate redo -m src/migrations",
+    "migrate:baseline": "node src/scripts/baseline.js",
+    "migrate:status": "node-pg-migrate status -m src/migrations",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "database",
     "postgresql",
     "connection-pool"
-  ],
+  ], 
   "author": "",
   "license": "ISC",
   "description": "PostgreSQL database service with connection pooling and monitoring",

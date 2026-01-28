@@ -5,10 +5,7 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('uuid_generate_v4()'),
     },
-    kitchen_id: {
-      type: 'uuid',
-      notNull: true,
-    },
+    kitchen_id: { type: 'uuid', notNull: true },
     name: { type: 'text', notNull: true },
     tagline: { type: 'text' },
     bio: { type: 'text' },
@@ -27,17 +24,18 @@ exports.up = (pgm) => {
 
   pgm.sql(`
     DO $$ BEGIN
-      ALTER TABLE kitchens_staging
-        ADD CONSTRAINT kitchens_staging_kitchen_id_fkey
-        FOREIGN KEY (kitchen_id) REFERENCES kitchens(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'kitchens_staging_kitchen_id_fkey') THEN
+        ALTER TABLE kitchens_staging ADD CONSTRAINT kitchens_staging_kitchen_id_fkey
+          FOREIGN KEY (kitchen_id) REFERENCES kitchens(id) ON DELETE CASCADE;
+      END IF;
     END $$;
   `);
 
   pgm.sql(`
     DO $$ BEGIN
-      ALTER TABLE kitchens_staging ADD CONSTRAINT unique_kitchen_staging_name UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_kitchen_staging_name') THEN
+        ALTER TABLE kitchens_staging ADD CONSTRAINT unique_kitchen_staging_name UNIQUE (name);
+      END IF;
     END $$;
   `);
 
