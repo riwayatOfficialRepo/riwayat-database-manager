@@ -221,8 +221,8 @@ const healthCheck = async () => {
   }
 };
 
-// Execute query helper with logging
-const execute = async (sql, params = [], client = null) => {
+// Execute a single query with logging
+const executeQuery = async (sql, params = [], client = null) => {
   const db = client || pool;
   try {
     logger.debug({ sql, params }, 'Executing SQL');
@@ -234,11 +234,48 @@ const execute = async (sql, params = [], client = null) => {
   }
 };
 
+// Execute operation within a database transaction
+const executeTransaction = async (operation, context = {}, log = logger, operationName = 'Transaction', moduleName = 'TransactionHelper') => {
+  const client = await pool.connect();
+
+  try {
+    log.info(context, `[${moduleName}] ${operationName} - START`);
+    await client.query('BEGIN');
+
+    const result = await operation(client);
+
+    await client.query('COMMIT');
+    log.info(context, `[${moduleName}] ${operationName} - COMPLETE`);
+    return result;
+
+  } catch (error) {
+    const safeError = {
+      message: error.message,
+      stack: error.stack,
+      ...error,
+    };
+
+    log.error({ ...context, error: safeError }, `[${moduleName}] ${operationName} - ERROR`);
+
+    try {
+      await client.query('ROLLBACK');
+      log.info(context, `[${moduleName}] ${operationName} - ROLLBACK COMPLETE`);
+    } catch (rollbackErr) {
+      log.error({ rollbackErr }, `[${moduleName}] Rollback failed`);
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   connectDB,
   pool,
   query: pool.query.bind(pool),
-  execute,
+  executeQuery,
+  executeTransaction,
   getConnectionStats,
   logConnectionStats,
   healthCheck,

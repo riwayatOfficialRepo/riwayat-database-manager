@@ -1,4 +1,4 @@
-const { connectDB, pool,execute, healthCheck, getConnectionStats } = require('./database');
+const { connectDB, pool, executeQuery, executeTransaction, healthCheck, getConnectionStats } = require('./database');
 
 async function main() {
   try {
@@ -29,4 +29,4 @@ async function main() {
 // Start the application
 main();
 
-module.exports = { connectDB, pool,execute, healthCheck, getConnectionStats };
+module.exports = { connectDB, pool, executeQuery, executeTransaction, healthCheck, getConnectionStats };
