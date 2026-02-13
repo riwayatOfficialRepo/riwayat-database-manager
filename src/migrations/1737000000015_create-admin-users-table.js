@@ -14,19 +14,8 @@ exports.up = (pgm) => {
     deleted_at: { type: 'timestamp' },
   }, { ifNotExists: true });
 
-  pgm.sql(`
-    DO $$ BEGIN
-      ALTER TABLE admin_users ADD CONSTRAINT admin_users_email_key UNIQUE (email);
-    EXCEPTION WHEN duplicate_object THEN NULL;
-    END $$;
-  `);
-
-  pgm.sql(`
-    DO $$ BEGIN
-      ALTER TABLE admin_users ADD CONSTRAINT admin_users_phone_key UNIQUE (phone);
-    EXCEPTION WHEN duplicate_object THEN NULL;
-    END $$;
-  `);
+  pgm.sql('CREATE UNIQUE INDEX IF NOT EXISTS admin_users_email_key ON admin_users (email)');
+  pgm.sql('CREATE UNIQUE INDEX IF NOT EXISTS admin_users_phone_key ON admin_users (phone)');
 };
 
 exports.down = (pgm) => {
