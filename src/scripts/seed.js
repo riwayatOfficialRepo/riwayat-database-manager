@@ -143,6 +143,64 @@ async function seed() {
     }
     logger.info('Kitchen user roles seeded');
 
+    // ── 8. Admin Users ─────────────────────────────────────────────
+    // password_hash is bcrypt of 'admin123' - CHANGE IN PRODUCTION
+    const adminPasswordHash = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36zQvzsMv1Ri0Pg/DmhXrMC';
+
+    const adminUsersResult = await pool.query(`
+      INSERT INTO admin_users (name, email, phone, password_hash, is_active)
+      VALUES
+        ('Super Admin', 'superadmin@riwayat.com', '+966510000001', '${adminPasswordHash}', true),
+        ('Operations Manager', 'ops@riwayat.com', '+966510000002', '${adminPasswordHash}', true),
+        ('Support Agent', 'support@riwayat.com', '+966510000003', '${adminPasswordHash}', true)
+      ON CONFLICT (email) DO NOTHING
+      RETURNING id, name;
+    `);
+
+    const adminUsers = adminUsersResult.rows;
+    if (adminUsers.length === 0) {
+      logger.info('Admin users already seeded, fetching existing...');
+      const existing = await pool.query(`SELECT id, name FROM admin_users WHERE email IN ('superadmin@riwayat.com', 'ops@riwayat.com', 'support@riwayat.com') ORDER BY email`);
+      adminUsers.push(...existing.rows);
+    }
+    logger.info({ count: adminUsers.length }, 'Admin users seeded');
+
+    // ── 9. Admin Roles ───────────────────────────────────────────
+    const superAdminId = adminUsers.find(u => u.name === 'Super Admin')?.id || adminUsers[0]?.id;
+
+    await pool.query(`
+      INSERT INTO admin_roles (name, description, created_by, is_active)
+      VALUES
+        ('super_admin', 'Full platform access with all privileges', $1, true),
+        ('operations_manager', 'Manage kitchens, orders, and platform operations', $1, true),
+        ('support_agent', 'Handle customer and kitchen support tickets', $1, true)
+      ON CONFLICT (name) DO NOTHING;
+    `, [superAdminId]);
+
+    const adminRolesResult = await pool.query(`SELECT id, name FROM admin_roles WHERE name IN ('super_admin', 'operations_manager', 'support_agent')`);
+    const adminRoles = {};
+    adminRolesResult.rows.forEach(r => { adminRoles[r.name] = r.id; });
+    logger.info('Admin roles seeded');
+
+    // ── 10. Admin User Roles (mapping) ───────────────────────────
+    const adminUserRoleMappings = [
+      { userName: 'Super Admin', roleName: 'super_admin' },
+      { userName: 'Operations Manager', roleName: 'operations_manager' },
+      { userName: 'Support Agent', roleName: 'support_agent' },
+    ];
+
+    for (const mapping of adminUserRoleMappings) {
+      const user = adminUsers.find(u => u.name === mapping.userName);
+      if (user && adminRoles[mapping.roleName]) {
+        await pool.query(`
+          INSERT INTO admin_user_roles (admin_user_id, role_id)
+          VALUES ($1, $2)
+          ON CONFLICT (admin_user_id, role_id) DO NOTHING
+        `, [user.id, adminRoles[mapping.roleName]]);
+      }
+    }
+    logger.info('Admin user roles seeded');
+
     // ── Summary ──────────────────────────────────────────────────
     console.log('\n========================================');
     console.log('  SEED SUMMARY');
@@ -154,6 +212,10 @@ async function seed() {
     console.log('  kitchen_role_permissions: 12 entries');
     console.log('  kitchen_users:            3 entries');
     console.log('  kitchen_user_roles:       3 entries');
+    console.log('  ──────────────────────────────────────');
+    console.log('  admin_users:              3 entries');
+    console.log('  admin_roles:              3 entries');
+    console.log('  admin_user_roles:         3 entries');
     console.log('========================================');
     console.log('\nSeeding complete!\n');
 
