@@ -1,7 +1,7 @@
-const { Pool } = require('pg');
-const path = require('path');
-const logger = require('./logger');
-require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
+const { Pool } = require("pg");
+const path = require("path");
+const logger = require("./logger");
+require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
 // Hybrid Database configuration
 const dbConfig = process.env.POSTGRES_URL
@@ -14,11 +14,12 @@ const dbConfig = process.env.POSTGRES_URL
     }
   : {
       host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432', 10),
+      port: parseInt(process.env.DB_PORT || "5432", 10),
       database: process.env.DB_NAME,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
@@ -64,7 +65,7 @@ class ConnectionMonitor {
 
   logStats() {
     const stats = this.getStats();
-    console.log('📊 Database Connection Stats:', {
+    console.log("📊 Database Connection Stats:", {
       active: `${stats.active}/${stats.max}`,
       idle: stats.idle,
       waiting: stats.waiting,
@@ -107,11 +108,12 @@ pool.query = function (queryTextOrConfig, values) {
       const duration = Date.now() - startTime;
       if (duration > 1000) {
         // Log slow queries
-        const queryText = typeof queryTextOrConfig === 'string'
-          ? queryTextOrConfig
-          : queryTextOrConfig.text || '';
+        const queryText =
+          typeof queryTextOrConfig === "string"
+            ? queryTextOrConfig
+            : queryTextOrConfig.text || "";
         console.warn(`⚠️ Slow query detected: ${duration}ms`, {
-          query: queryText.substring(0, 100) + '...',
+          query: queryText.substring(0, 100) + "...",
         });
       }
 
@@ -125,36 +127,36 @@ pool.query = function (queryTextOrConfig, values) {
 };
 
 // Track connection lifecycle
-pool.on('connect', () => {
+pool.on("connect", () => {
   monitor.incrementCreated();
   monitor.updateStats();
-  console.log('🔗 New database connection created');
+  console.log("🔗 New database connection created");
 });
 
-pool.on('acquire', () => {
+pool.on("acquire", () => {
   monitor.incrementAcquired();
   monitor.updateStats();
 });
 
-pool.on('release', () => {
+pool.on("release", () => {
   monitor.incrementReleased();
   monitor.updateStats();
 });
 
-pool.on('remove', () => {
+pool.on("remove", () => {
   monitor.incrementRemoved();
   monitor.updateStats();
-  console.log('🗑️ Database connection removed');
+  console.log("🗑️ Database connection removed");
 });
 
 // Test database connection
 const connectDB = async () => {
   try {
     const client = await pool.connect();
-    console.log('✅ PostgreSQL database connected successfully');
+    console.log("✅ PostgreSQL database connected successfully");
 
-    const result = await client.query('SELECT NOW()');
-    console.log('🕒 Database time:', result.rows[0].now);
+    const result = await client.query("SELECT NOW()");
+    console.log("🕒 Database time:", result.rows[0].now);
 
     // Log initial stats
     monitor.logStats();
@@ -162,15 +164,16 @@ const connectDB = async () => {
     client.release();
     return pool;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ Database connection failed:', errorMessage);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("❌ Database connection failed:", errorMessage);
     throw error;
   }
 };
 
 // Handle pool errors
-pool.on('error', (err) => {
-  console.error('❌ Unexpected error on idle client', err);
+pool.on("error", (err) => {
+  console.error("❌ Unexpected error on idle client", err);
   monitor.updateStats();
 });
 
@@ -179,22 +182,22 @@ const getConnectionStats = () => monitor.getStats();
 const logConnectionStats = () => monitor.logStats();
 
 // Auto-log stats every 30 seconds (optional)
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   setInterval(() => {
     monitor.logStats();
   }, 30000);
 }
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🛑 Shutting down database pool...');
+process.on("SIGINT", async () => {
+  console.log("🛑 Shutting down database pool...");
 
   // Log final stats
   const finalStats = monitor.getStats();
-  console.log('📊 Final connection stats:', finalStats);
+  console.log("📊 Final connection stats:", finalStats);
 
   await pool.end();
-  console.log('✅ Database pool closed');
+  console.log("✅ Database pool closed");
   process.exit(0);
 });
 
@@ -202,19 +205,20 @@ process.on('SIGINT', async () => {
 const healthCheck = async () => {
   try {
     const stats = monitor.getStats();
-    await pool.query('SELECT 1 as health_check');
+    await pool.query("SELECT 1 as health_check");
 
     return {
-      status: 'healthy',
-      database: 'connected',
+      status: "healthy",
+      database: "connected",
       connections: stats,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return {
-      status: 'unhealthy',
-      database: 'disconnected',
+      status: "unhealthy",
+      database: "disconnected",
       error: errorMessage,
       timestamp: new Date().toISOString(),
     };
@@ -225,29 +229,34 @@ const healthCheck = async () => {
 const executeQuery = async (sql, params = [], client = null) => {
   const db = client || pool;
   try {
-    logger.debug({ sql, params }, 'Executing SQL');
+    logger.debug({ sql, params }, "Executing SQL");
     const { rows } = await db.query(sql, params);
     return rows;
   } catch (error) {
-    logger.error({ error, sql, params }, 'Database error');
+    logger.error({ error, sql, params }, "Database error");
     throw error;
   }
 };
 
 // Execute operation within a database transaction
-const executeTransaction = async (operation, context = {}, log = logger, operationName = 'Transaction', moduleName = 'TransactionHelper') => {
+const executeTransaction = async (
+  operation,
+  context = {},
+  log = logger,
+  operationName = "Transaction",
+  moduleName = "TransactionHelper",
+) => {
   const client = await pool.connect();
 
   try {
     log.info(context, `[${moduleName}] ${operationName} - START`);
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     const result = await operation(client);
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     log.info(context, `[${moduleName}] ${operationName} - COMPLETE`);
     return result;
-
   } catch (error) {
     const safeError = {
       message: error.message,
@@ -255,10 +264,13 @@ const executeTransaction = async (operation, context = {}, log = logger, operati
       ...error,
     };
 
-    log.error({ ...context, error: safeError }, `[${moduleName}] ${operationName} - ERROR`);
+    log.error(
+      { ...context, error: safeError },
+      `[${moduleName}] ${operationName} - ERROR`,
+    );
 
     try {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       log.info(context, `[${moduleName}] ${operationName} - ROLLBACK COMPLETE`);
     } catch (rollbackErr) {
       log.error({ rollbackErr }, `[${moduleName}] Rollback failed`);
