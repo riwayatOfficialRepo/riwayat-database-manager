@@ -11,19 +11,14 @@ exports.up = (pgm) => {
     deleted_at: { type: 'timestamp' },
   }, { ifNotExists: true });
 
-  pgm.sql(`
-    DO $$ BEGIN
-      ALTER TABLE admin_roles ADD CONSTRAINT admin_roles_name_key UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
-    END $$;
-  `);
+  pgm.sql('CREATE UNIQUE INDEX IF NOT EXISTS admin_roles_name_key ON admin_roles (name)');
 
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE admin_roles ADD CONSTRAINT admin_roles_created_by_fkey
         FOREIGN KEY (created_by) REFERENCES admin_users (id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
     END $$;
   `);
 
@@ -32,7 +27,7 @@ exports.up = (pgm) => {
       ALTER TABLE admin_roles ADD CONSTRAINT admin_roles_updated_by_fkey
         FOREIGN KEY (updated_by) REFERENCES admin_users (id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
     END $$;
   `);
 };
