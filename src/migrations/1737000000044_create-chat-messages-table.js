@@ -10,10 +10,10 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('gen_random_uuid()')
     },
-    room_id: {
+    chat_id: {
       type: 'uuid',
       notNull: true,
-      references: 'chat_rooms(id)',
+      references: 'chats(id)',
       onDelete: 'CASCADE'
     },
     // Sender information
@@ -24,11 +24,11 @@ exports.up = (pgm) => {
     sender_type: {
       type: 'varchar(50)',
       notNull: true,
-      comment: 'customer, kitchen_user, rider, admin, system'
+      comment: 'customer, partner, rider, admin, system. Partner sub-types (CHEF/OWNER) are stored in kitchen_users.roles'
     },
     participant_id: {
       type: 'uuid',
-      references: 'chat_room_participants(id)',
+      references: 'chat_participants(id)',
       onDelete: 'SET NULL',
       comment: 'Reference to participant record'
     },
@@ -36,7 +36,7 @@ exports.up = (pgm) => {
     message_type: {
       type: 'chat_message_type',
       notNull: true,
-      default: 'text'
+      default: 'TEXT'
     },
     content: {
       type: 'text',
@@ -92,19 +92,19 @@ exports.up = (pgm) => {
   }, { ifNotExists: true });
 
   // Indexes
-  pgm.createIndex('chat_messages', 'room_id', { name: 'idx_chat_messages_room_id', ifNotExists: true });
+  pgm.createIndex('chat_messages', 'chat_id', { name: 'idx_chat_messages_chat_id', ifNotExists: true });
   pgm.createIndex('chat_messages', ['sender_id', 'sender_type'], { name: 'idx_chat_messages_sender', ifNotExists: true });
   pgm.createIndex('chat_messages', 'created_at', { name: 'idx_chat_messages_created_at', ifNotExists: true });
   pgm.createIndex('chat_messages', 'reply_to_message_id', { name: 'idx_chat_messages_reply_to', where: 'reply_to_message_id IS NOT NULL', ifNotExists: true });
   
-  // Index for fetching messages in a room (pagination)
-  pgm.createIndex('chat_messages', ['room_id', 'created_at'], {
-    name: 'idx_chat_messages_room_chronological',
+  // Index for fetching messages in a chat (pagination)
+  pgm.createIndex('chat_messages', ['chat_id', 'created_at'], {
+    name: 'idx_chat_messages_chat_chronological',
     ifNotExists: true
   });
 
-  // Unique constraint for client_msg_id per room (deduplication)
-  pgm.createIndex('chat_messages', ['room_id', 'client_msg_id'], {
+  // Unique constraint for client_msg_id per chat (deduplication)
+  pgm.createIndex('chat_messages', ['chat_id', 'client_msg_id'], {
     name: 'idx_chat_messages_client_dedup',
     unique: true,
     where: 'client_msg_id IS NOT NULL',

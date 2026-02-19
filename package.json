@@ -11,6 +11,7 @@
     "migrate:redo": "node-pg-migrate redo -m src/migrations",
     "migrate:baseline": "node src/scripts/baseline.js",
     "migrate:status": "node-pg-migrate status -m src/migrations",
+    "migrate:reset": "node src/scripts/reset.js",
     "seed": "node src/scripts/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

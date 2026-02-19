@@ -4,10 +4,15 @@
  */
 
 exports.up = (pgm) => {
-  pgm.createType('chat_receipt_status', [
-    'delivered',
-    'read'
-  ]);
+  pgm.sql(`
+    DO $$ BEGIN
+      CREATE TYPE chat_receipt_status AS ENUM (
+        'DELIVERED',
+        'READ'
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
 
   pgm.createTable('chat_message_receipts', {
     id: {
@@ -24,7 +29,7 @@ exports.up = (pgm) => {
     participant_id: {
       type: 'uuid',
       notNull: true,
-      references: 'chat_room_participants(id)',
+      references: 'chat_participants(id)',
       onDelete: 'CASCADE'
     },
     status: {

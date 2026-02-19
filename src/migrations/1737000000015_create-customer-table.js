@@ -5,7 +5,7 @@ exports.up = (pgm) => {
       primaryKey: true,
       default: pgm.func('gen_random_uuid()'),
     },
-    customer_small_id: {
+    customer_display_id: {
       type: 'varchar(20)',
       notNull: true,
       unique: true,
