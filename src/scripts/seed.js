@@ -1,7 +1,11 @@
 /**
  * Seed Script
  *
- * Seeds the database with sample data for kitchens and related mapping tables.
+ * Seeds the database with sample data for:
+ * - Kitchens and related mapping tables
+ * - Admin users and roles
+ * - Customers, customer favorites, and customer addresses
+ * 
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
  * Usage: npm run seed
@@ -201,6 +205,276 @@ async function seed() {
     }
     logger.info('Admin user roles seeded');
 
+    // ── 11. Customers ────────────────────────────────────────────
+    const customersData = [
+      {
+        customer_display_id: 'CUST-00001',
+        name: 'Ali Ahmed',
+        email: 'ali.ahmed@example.com',
+        mobile: '+966500100001',
+        gender: 'male',
+        dob: '1990-05-15',
+        type: 'basic',
+        status: 'active',
+        is_email_verified: true,
+        is_mobile_verified: true,
+      },
+      {
+        customer_display_id: 'CUST-00002',
+        name: 'Sara Mohammed',
+        email: 'sara.mohammed@example.com',
+        mobile: '+966500100002',
+        gender: 'female',
+        dob: '1992-08-22',
+        type: 'premium',
+        status: 'active',
+        is_email_verified: true,
+        is_mobile_verified: true,
+      },
+      {
+        customer_display_id: 'CUST-00003',
+        name: 'Omar Hassan',
+        email: 'omar.hassan@example.com',
+        mobile: '+966500100003',
+        gender: 'male',
+        dob: '1988-12-10',
+        type: 'basic',
+        status: 'active',
+        is_email_verified: false,
+        is_mobile_verified: true,
+      },
+    ];
+
+    const customerIds = [];
+    for (const customer of customersData) {
+      const res = await pool.query(`
+        INSERT INTO customer (
+          customer_display_id, name, email, mobile, gender, dob, type, status,
+          is_email_verified, is_mobile_verified, last_login_at, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())
+        ON CONFLICT (customer_display_id) DO NOTHING
+        RETURNING id, customer_display_id, name
+      `, [
+        customer.customer_display_id,
+        customer.name,
+        customer.email,
+        customer.mobile,
+        customer.gender,
+        customer.dob,
+        customer.type,
+        customer.status,
+        customer.is_email_verified,
+        customer.is_mobile_verified,
+      ]);
+
+      if (res.rows.length > 0) {
+        customerIds.push(res.rows[0].id);
+      } else {
+        const existing = await pool.query(
+          `SELECT id FROM customer WHERE customer_display_id = $1`,
+          [customer.customer_display_id]
+        );
+        if (existing.rows.length > 0) {
+          customerIds.push(existing.rows[0].id);
+        }
+      }
+    }
+    logger.info({ count: customerIds.length }, 'Customers seeded');
+
+    // ── 12. Customer Favorites (Kitchens) ────────────────────────
+    // Assign each customer some favorite kitchens
+    // Customer 1 favorites: Kitchen 1 and Kitchen 2
+    // Customer 2 favorites: Kitchen 2 and Kitchen 3
+    // Customer 3 favorites: Kitchen 1
+    if (customerIds.length >= 3 && kitchens.length >= 3) {
+      const favoriteMappings = [
+        { customerIndex: 0, kitchenIndex: 0 }, // Ali -> Al Bayt Kitchen
+        { customerIndex: 0, kitchenIndex: 1 }, // Ali -> Spice Route Kitchen
+        { customerIndex: 1, kitchenIndex: 1 }, // Sara -> Spice Route Kitchen
+        { customerIndex: 1, kitchenIndex: 2 }, // Sara -> Green Oasis Kitchen
+        { customerIndex: 2, kitchenIndex: 0 }, // Omar -> Al Bayt Kitchen
+      ];
+
+      for (const mapping of favoriteMappings) {
+        // Check if favorite already exists
+        const existing = await pool.query(`
+          SELECT id FROM customer_favorite
+          WHERE customer_id = $1
+            AND favorite_type = $2
+            AND target_id = $3
+        `, [
+          customerIds[mapping.customerIndex],
+          'kitchen',
+          kitchens[mapping.kitchenIndex].id,
+        ]);
+
+        if (existing.rows.length === 0) {
+          // Insert new favorite
+          await pool.query(`
+            INSERT INTO customer_favorite (
+              customer_id, favorite_type, target_id, source, created_at
+            )
+            VALUES ($1, $2, $3, $4, NOW())
+          `, [
+            customerIds[mapping.customerIndex],
+            'kitchen',
+            kitchens[mapping.kitchenIndex].id,
+            'user',
+          ]);
+        } else {
+          // Reactivate if it was removed
+          await pool.query(`
+            UPDATE customer_favorite
+            SET removed_at = NULL, source = $4
+            WHERE customer_id = $1
+              AND favorite_type = $2
+              AND target_id = $3
+          `, [
+            customerIds[mapping.customerIndex],
+            'kitchen',
+            kitchens[mapping.kitchenIndex].id,
+            'user',
+          ]);
+        }
+      }
+      logger.info({ count: favoriteMappings.length }, 'Customer favorites seeded');
+    }
+
+    // ── 13. Customer Addresses ───────────────────────────────────
+    if (customerIds.length >= 3) {
+      const addressesData = [
+        {
+          customerIndex: 0,
+          label: 'Home',
+          type: 'home',
+          line1: '123 King Fahd Road',
+          line2: 'Building 5, Apartment 12',
+          area: 'Al Olaya',
+          city: 'Riyadh',
+          province: 'Riyadh',
+          postal_code: '12211',
+          country: 'Saudi Arabia',
+          latitude: 24.7136,
+          longitude: 46.6753,
+          location_source: 'gps',
+          contact_person_name: 'Ali Ahmed',
+          contact_person_mobile: '+966500100001',
+          is_primary: true,
+          is_default_delivery: true,
+          status: 'active',
+        },
+        {
+          customerIndex: 0,
+          label: 'Work',
+          type: 'work',
+          line1: '456 Business District',
+          line2: 'Office Tower, Floor 10',
+          area: 'Al Malaz',
+          city: 'Riyadh',
+          province: 'Riyadh',
+          postal_code: '12643',
+          country: 'Saudi Arabia',
+          latitude: 24.6408,
+          longitude: 46.7728,
+          location_source: 'manual',
+          contact_person_name: 'Ali Ahmed',
+          contact_person_mobile: '+966500100001',
+          is_primary: false,
+          is_default_delivery: false,
+          status: 'active',
+        },
+        {
+          customerIndex: 1,
+          label: 'Home',
+          type: 'home',
+          line1: '789 Al Nakheel Street',
+          line2: 'Villa 15',
+          area: 'Al Wurud',
+          city: 'Riyadh',
+          province: 'Riyadh',
+          postal_code: '12284',
+          country: 'Saudi Arabia',
+          latitude: 24.6877,
+          longitude: 46.7219,
+          location_source: 'gps',
+          contact_person_name: 'Sara Mohammed',
+          contact_person_mobile: '+966500100002',
+          is_primary: true,
+          is_default_delivery: true,
+          status: 'active',
+        },
+        {
+          customerIndex: 2,
+          label: 'Home',
+          type: 'home',
+          line1: '321 Prince Sultan Street',
+          line2: 'Apartment 8',
+          area: 'Al Malqa',
+          city: 'Riyadh',
+          province: 'Riyadh',
+          postal_code: '13521',
+          country: 'Saudi Arabia',
+          latitude: 24.7584,
+          longitude: 46.6394,
+          location_source: 'gps',
+          contact_person_name: 'Omar Hassan',
+          contact_person_mobile: '+966500100003',
+          is_primary: true,
+          is_default_delivery: true,
+          status: 'active',
+        },
+      ];
+
+      for (const address of addressesData) {
+        // Check if similar address already exists for this customer
+        const existing = await pool.query(`
+          SELECT id FROM customer_address
+          WHERE customer_id = $1
+            AND line1 = $2
+            AND city = $3
+            AND label = $4
+        `, [
+          customerIds[address.customerIndex],
+          address.line1,
+          address.city,
+          address.label,
+        ]);
+
+        if (existing.rows.length === 0) {
+          await pool.query(`
+            INSERT INTO customer_address (
+              customer_id, label, type, line1, line2, area, city, province,
+              postal_code, country, latitude, longitude, location_source,
+              contact_person_name, contact_person_mobile,
+              is_primary, is_default_delivery, status, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW())
+          `, [
+            customerIds[address.customerIndex],
+            address.label,
+            address.type,
+            address.line1,
+            address.line2,
+            address.area,
+            address.city,
+            address.province,
+            address.postal_code,
+            address.country,
+            address.latitude,
+            address.longitude,
+            address.location_source,
+            address.contact_person_name,
+            address.contact_person_mobile,
+            address.is_primary,
+            address.is_default_delivery,
+            address.status,
+          ]);
+        }
+      }
+      logger.info({ count: addressesData.length }, 'Customer addresses seeded');
+    }
+
     // ── Summary ──────────────────────────────────────────────────
     console.log('\n========================================');
     console.log('  SEED SUMMARY');
@@ -216,6 +490,10 @@ async function seed() {
     console.log('  admin_users:              3 entries');
     console.log('  admin_roles:              3 entries');
     console.log('  admin_user_roles:         3 entries');
+    console.log('  ──────────────────────────────────────');
+    console.log('  customers:               3 entries');
+    console.log('  customer_favorites:      5 entries');
+    console.log('  customer_addresses:      4 entries');
     console.log('========================================');
     console.log('\nSeeding complete!\n');
 
