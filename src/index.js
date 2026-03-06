@@ -26,7 +26,9 @@ async function main() {
   }
 }
 
-// Start the application
-main();
+// Start the application only when run directly (not when imported as a module)
+if (require.main === module) {
+  main();
+}
 
 module.exports = { connectDB, pool, executeQuery, executeTransaction, healthCheck, getConnectionStats };
