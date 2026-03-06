@@ -1,11 +1,10 @@
 exports.up = (pgm) => {
-  // Create table
+  // Create table — must run before loyalty_awards which has FK to wallet_accounts
   pgm.createTable('wallet_accounts', {
     wallet_account_id: {
-      type: 'bigint',
+      type: 'bigserial', // auto-creates wallet_accounts_wallet_account_id_seq
       notNull: true,
       primaryKey: true,
-      default: pgm.func("nextval('wallet_accounts_wallet_account_id_seq'::regclass)"),
     },
     customer_id: { type: 'varchar(50)', notNull: true, unique: true },
     balance_points: { type: 'numeric(12,2)', notNull: true, default: 0 },
@@ -21,8 +20,6 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  // Drop index first
   pgm.dropIndex('wallet_accounts', 'customer_id', { ifExists: true });
-  // Drop table
   pgm.dropTable('wallet_accounts', { ifExists: true });
 };

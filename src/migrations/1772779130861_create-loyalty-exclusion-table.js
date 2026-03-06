@@ -2,10 +2,9 @@ exports.up = (pgm) => {
   // Create loyalty_exclusions table
   pgm.createTable('loyalty_exclusions', {
     exclusion_id: {
-      type: 'bigint',
+      type: 'bigserial', // auto-creates loyalty_exclusions_exclusion_id_seq
       notNull: true,
       primaryKey: true,
-      default: pgm.func("nextval('loyalty_exclusions_exclusion_id_seq')"),
     },
     exclusion_type: { type: 'varchar(50)', notNull: true },
     created_at: { type: 'timestamp', notNull: true, default: pgm.func('now()') },

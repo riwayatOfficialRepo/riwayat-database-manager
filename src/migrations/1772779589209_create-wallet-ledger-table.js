@@ -2,10 +2,9 @@ exports.up = (pgm) => {
   // Create table
   pgm.createTable('wallet_ledger', {
     ledger_id: {
-      type: 'bigint',
+      type: 'bigserial', // auto-creates wallet_ledger_ledger_id_seq
       notNull: true,
       primaryKey: true,
-      default: pgm.func("nextval('wallet_ledger_ledger_id_seq'::regclass)"),
     },
     wallet_account_id: { type: 'bigint', notNull: true },
     award_id: { type: 'bigint' },

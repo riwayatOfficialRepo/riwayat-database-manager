@@ -2,10 +2,9 @@ exports.up = (pgm) => {
   // Create loyalty_awards table
   pgm.createTable('loyalty_awards', {
     award_id: {
-      type: 'bigint',
+      type: 'bigserial', // auto-creates loyalty_awards_award_id_seq
       notNull: true,
       primaryKey: true,
-      default: pgm.func("nextval('loyalty_awards_award_id_seq')"),
     },
     wallet_account_id: { type: 'bigint', notNull: true },
     award_type: { type: 'varchar(30)', notNull: true },
