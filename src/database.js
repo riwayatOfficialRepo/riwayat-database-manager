@@ -4,9 +4,9 @@ const logger = require("./logger");
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
 // Hybrid Database configuration
-const dbConfig = process.env.POSTGRES_URL
+const dbConfig = (process.env.POSTGRES_URL || process.env.DATABASE_URL)
   ? {
-      connectionString: process.env.POSTGRES_URL,
+      connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: 20,
       idleTimeoutMillis: 30000,
