@@ -11,6 +11,17 @@ exports.up = (pgm) => {
   }, { ifNotExists: true });
 
   pgm.sql('CREATE UNIQUE INDEX IF NOT EXISTS admin_permissions_key_key ON admin_permissions (key)');
+
+  // Add FK from admin_role_permissions.permission_id -> admin_permissions.id
+  // Done here because admin_permissions (053) runs after admin_role_permissions (052)
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE admin_role_permissions ADD CONSTRAINT admin_role_permissions_permission_id_fkey
+        FOREIGN KEY (permission_id) REFERENCES admin_permissions (id)
+        ON UPDATE NO ACTION ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
