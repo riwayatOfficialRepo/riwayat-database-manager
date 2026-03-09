@@ -27,14 +27,7 @@ exports.up = (pgm) => {
     },
   });
 
-  pgm.addConstraint('wallet_ledger', 'wallet_ledger_wallet_account_id_fkey', {
-    foreignKeys: {
-      columns: 'wallet_account_id',
-      references: 'wallet_accounts(wallet_account_id)',
-      onUpdate: 'NO ACTION',
-      onDelete: 'NO ACTION',
-    },
-  });
+  // wallet_account_id FK is added in 1773500000002 (after wallet_accounts is created)
 
   // Indexes
   pgm.createIndex('wallet_ledger', 'award_id', { ifNotExists: true, name: 'idx_wallet_ledger_award' });
