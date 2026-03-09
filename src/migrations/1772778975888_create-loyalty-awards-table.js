@@ -20,15 +20,8 @@ exports.up = (pgm) => {
     updated_at: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
   }, { ifNotExists: true });
 
-  // Add foreign key
-  pgm.addConstraint('loyalty_awards', 'loyalty_awards_wallet_account_id_fkey', {
-    foreignKeys: {
-      columns: 'wallet_account_id',
-      references: 'wallet_accounts(wallet_account_id)',
-      onDelete: 'NO ACTION',
-      onUpdate: 'NO ACTION'
-    }
-  });
+  // FK to wallet_accounts is in a separate later migration (1773200000000)
+  // because wallet_accounts (1772779483588) sorts after this file
 
   // Add checks
   pgm.addConstraint('loyalty_awards', 'loyalty_awards_points_earned_check', {
