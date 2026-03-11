@@ -250,9 +250,9 @@ async function seed() {
       const res = await pool.query(`
         INSERT INTO customer (
           customer_display_id, name, email, mobile, gender, dob, type, status,
-          is_email_verified, is_mobile_verified, last_login_at, created_at, updated_at
+          is_email_verified, is_mobile_verified, user_entity_type, last_login_at, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW())
         ON CONFLICT (customer_display_id) DO NOTHING
         RETURNING id, customer_display_id, name
       `, [
@@ -266,6 +266,7 @@ async function seed() {
         customer.status,
         customer.is_email_verified,
         customer.is_mobile_verified,
+        'CUSTOMER',
       ]);
 
       if (res.rows.length > 0) {
@@ -281,6 +282,42 @@ async function seed() {
       }
     }
     logger.info({ count: customerIds.length }, 'Customers seeded');
+
+    // ── 11.1 Customer Roles + User Roles (mapping) ───────────────
+    // Create a single default role: "Customer", then assign it to all seeded customers
+    await pool.query(`
+      INSERT INTO customer_roles (name, label_key, description, status)
+      VALUES
+        ('Customer', 'role.customer', 'Default role for customer users', 'ACTIVE')
+      ON CONFLICT (name) DO NOTHING;
+    `);
+
+    const customerRoleRes = await pool.query(
+      `SELECT id, name FROM customer_roles WHERE name = 'Customer' LIMIT 1`,
+    );
+    const customerRoleId = customerRoleRes.rows[0]?.id;
+
+    if (customerRoleId && customerIds.length > 0) {
+      for (const customerId of customerIds) {
+        await pool.query(
+          `
+            INSERT INTO customer_user_roles (customer_user_id, role_id, status)
+            VALUES ($1, $2, 'ACTIVE')
+            ON CONFLICT (customer_user_id, role_id) DO NOTHING
+          `,
+          [customerId, customerRoleId],
+        );
+      }
+      logger.info(
+        { roleId: customerRoleId, assignedCount: customerIds.length },
+        'Customer role assigned to customers',
+      );
+    } else {
+      logger.warn(
+        { hasRoleId: !!customerRoleId, customerCount: customerIds.length },
+        'Skipping customer role assignment (role missing or no customers)',
+      );
+    }
 
     // ── 12. Customer Favorites (Kitchens) ────────────────────────
     // Assign each customer some favorite kitchens
