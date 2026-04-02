@@ -22,47 +22,57 @@ exports.up = (pgm) => {
     END $$;
   `);
 
-  pgm.createTable('chat_entities', {
-    id: {
-      type: 'uuid',
-      primaryKey: true,
-      default: pgm.func('gen_random_uuid()')
+  pgm.createTable(
+    "chat_entities",
+    {
+      id: {
+        type: "uuid",
+        primaryKey: true,
+        default: pgm.func("gen_random_uuid()"),
+      },
+      chat_id: {
+        type: "uuid",
+        notNull: true,
+        references: "chats(id)",
+        onDelete: "CASCADE",
+      },
+      entity_type: {
+        type: "chat_entity_type",
+        notNull: true,
+      },
+      entity_id: {
+        type: "uuid",
+        notNull: true,
+      },
+      // Audit fields
+      created_at: {
+        type: "timestamptz",
+        notNull: true,
+        default: pgm.func("now()"),
+      },
     },
-    chat_id: {
-      type: 'uuid',
-      notNull: true,
-      references: 'chats(id)',
-      onDelete: 'CASCADE'
-    },
-    entity_type: {
-      type: 'chat_entity_type',
-      notNull: true
-    },
-    entity_id: {
-      type: 'uuid',
-      notNull: true
-    },
-    // Audit fields
-    created_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()')
-    }
-  }, { ifNotExists: true });
+    { ifNotExists: true },
+  );
 
   // Indexes
-  pgm.createIndex('chat_entities', 'chat_id', { name: 'idx_chat_entities_chat_id', ifNotExists: true });
-  pgm.createIndex('chat_entities', ['entity_type', 'entity_id'], { name: 'idx_chat_entities_entity', ifNotExists: true });
-  
+  pgm.createIndex("chat_entities", "chat_id", {
+    name: "idx_chat_entities_chat_id",
+    ifNotExists: true,
+  });
+  pgm.createIndex("chat_entities", ["entity_type", "entity_id"], {
+    name: "idx_chat_entities_entity",
+    ifNotExists: true,
+  });
+
   // Prevent duplicate entity assignments to same chat
-  pgm.createIndex('chat_entities', ['chat_id', 'entity_type', 'entity_id'], {
-    name: 'idx_chat_entities_unique',
+  pgm.createIndex("chat_entities", ["chat_id", "entity_type", "entity_id"], {
+    name: "idx_chat_entities_unique",
     unique: true,
-    ifNotExists: true
+    ifNotExists: true,
   });
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('chat_entities', { ifExists: true, cascade: true });
-  pgm.dropType('chat_entity_type', { ifExists: true });
+  pgm.dropTable("chat_entities", { ifExists: true, cascade: true });
+  pgm.dropType("chat_entity_type", { ifExists: true });
 };
