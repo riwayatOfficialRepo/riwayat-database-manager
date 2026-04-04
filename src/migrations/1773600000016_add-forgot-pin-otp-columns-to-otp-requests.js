@@ -4,16 +4,15 @@
  */
 
 exports.up = (pgm) => {
-  pgm.addColumn("otp_requests", {
-    forgot_pin_trial_count: {
-      type: "integer",
-      notNull: true,
-      default: 0,
-    },
-    timeout_until_forgot_pin: {
-      type: "timestamp",
-    },
-  });
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE otp_requests
+        ADD COLUMN IF NOT EXISTS forgot_pin_trial_count integer NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS timeout_until_forgot_pin timestamp;
+    EXCEPTION WHEN undefined_table THEN
+      NULL;
+    END $$;
+  `);
 };
 
 exports.down = (pgm) => {
