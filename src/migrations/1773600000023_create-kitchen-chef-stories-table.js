@@ -37,6 +37,10 @@ exports.up = (pgm) => {
       deleted_at: {
         type: 'timestamp',
       },
+      status: {
+        type: 'varchar(50)',
+        default: 'pending',
+      },
     },
     { ifNotExists: true },
   );
