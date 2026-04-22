@@ -3,6 +3,27 @@
  */
 
 exports.up = (pgm) => {
+  // ── trigger functions ────────────────────────────────────────
+  pgm.sql(`
+    CREATE OR REPLACE FUNCTION update_recommended_dishes_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = now();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  pgm.sql(`
+    CREATE OR REPLACE FUNCTION update_recommended_dishes_staging_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = now();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
   // ── recommended_dishes ───────────────────────────────────────
   pgm.createTable('recommended_dishes', {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },

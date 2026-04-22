@@ -3,6 +3,27 @@
  */
 
 exports.up = (pgm) => {
+  // ── trigger functions ────────────────────────────────────────
+  pgm.sql(`
+    CREATE OR REPLACE FUNCTION update_updated_at_column()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = now();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  pgm.sql(`
+    CREATE OR REPLACE FUNCTION update_modifiers_staging_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = now();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
   // ── modifiers ────────────────────────────────────────────────
   pgm.createTable('modifiers', {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },
