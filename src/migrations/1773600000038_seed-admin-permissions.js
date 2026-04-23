@@ -1,5 +1,5 @@
 /**
- * Migration: Seed admin permissions, super_admin role, and map all permissions to it
+ * Migration: Seed admin permissions, superadmin role, and map all permissions to it
  */
 
 exports.up = (pgm) => {
@@ -107,19 +107,19 @@ exports.up = (pgm) => {
     ON CONFLICT (key) DO NOTHING;
   `);
 
-  // ── SEED: super_admin role ───────────────────────────────────
+  // ── SEED: superadmin role ───────────────────────────────────
   pgm.sql(`
     INSERT INTO admin_roles (name, description, is_active)
-    VALUES ('super_admin', 'Full access to all admin features', true)
+    VALUES ('superadmin', 'Full access to all admin features', true)
     ON CONFLICT (name) DO NOTHING;
   `);
 
-  // ── MAP: all permissions -> super_admin role ─────────────────
+  // ── MAP: all permissions -> superadmin role ─────────────────
   pgm.sql(`
     INSERT INTO admin_role_permissions (role_id, permission_id)
     SELECT r.id, p.id
     FROM admin_roles r, admin_permissions p
-    WHERE r.name = 'super_admin'
+    WHERE r.name = 'superadmin'
     ON CONFLICT (role_id, permission_id) DO NOTHING;
   `);
 };
@@ -127,9 +127,9 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.sql(`
     DELETE FROM admin_role_permissions
-    WHERE role_id = (SELECT id FROM admin_roles WHERE name = 'super_admin');
+    WHERE role_id = (SELECT id FROM admin_roles WHERE name = 'superadmin');
   `);
-  pgm.sql(`DELETE FROM admin_roles WHERE name = 'super_admin'`);
+  pgm.sql(`DELETE FROM admin_roles WHERE name = 'superadmin'`);
   pgm.sql(`
     DELETE FROM admin_permissions WHERE key LIKE 'admin.%';
   `);

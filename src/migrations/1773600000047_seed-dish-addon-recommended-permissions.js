@@ -19,7 +19,7 @@ exports.up = (pgm) => {
     INSERT INTO admin_role_permissions (role_id, permission_id)
     SELECT r.id, p.id
     FROM admin_roles r, admin_permissions p
-    WHERE r.name = 'super_admin'
+    WHERE r.name = 'superadmin'
       AND p.key IN (
         'admin.dish.addOn.create',
         'admin.dish.addOn.edit',
