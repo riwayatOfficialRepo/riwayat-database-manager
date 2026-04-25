@@ -3,13 +3,6 @@
  */
 
 exports.up = (pgm) => {
-  // Remove old categories not in the correct list
-  pgm.sql(`
-    DELETE FROM dish_categories
-    WHERE name NOT IN ('Home Catering', 'Side On', 'Special Event', 'Custom', 'Readily');
-  `);
-
-  // Insert missing ones
   pgm.sql(`
     INSERT INTO dish_categories (name, label_key, status) VALUES
       ('Home Catering', 'category.home_catering', 'ACTIVE'),
