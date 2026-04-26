@@ -3,11 +3,59 @@ const path = require("path");
 const logger = require("./logger");
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
+/**
+ * Whether to use TLS for `pg`. Local Postgres often has SSL off; cloud URLs need SSL.
+ * - DATABASE_SSL=true / DB_SSL=true → enable SSL (rejectUnauthorized: false)
+ * - DATABASE_SSL=false / DB_SSL=false → disable SSL
+ * - PGSSLMODE=disable → disable SSL
+ * - Else for connection-string mode: SSL off for localhost/127.0.0.1, on for other hosts
+ */
+function resolvePgSsl(connectionString) {
+  const explicitOff =
+    process.env.DATABASE_SSL === "false" ||
+    process.env.DATABASE_SSL === "0" ||
+    process.env.DB_SSL === "false" ||
+    process.env.DB_SSL === "0" ||
+    process.env.PGSSLMODE === "disable";
+  const explicitOn =
+    process.env.DATABASE_SSL === "true" ||
+    process.env.DATABASE_SSL === "1" ||
+    process.env.DB_SSL === "true" ||
+    process.env.DB_SSL === "1";
+
+  if (explicitOff) return false;
+  if (explicitOn) return { rejectUnauthorized: false };
+
+  if (!connectionString) {
+    return process.env.DB_SSL === "true"
+      ? { rejectUnauthorized: false }
+      : false;
+  }
+
+  try {
+    const host = new URL(connectionString).hostname;
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1"
+    ) {
+      return false;
+    }
+  } catch {
+    /* fall through */
+  }
+
+  return { rejectUnauthorized: false };
+}
+
+const connectionString =
+  process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
+
 // Hybrid Database configuration
-const dbConfig = (process.env.POSTGRES_URL || process.env.DATABASE_URL)
+const dbConfig = connectionString
   ? {
-      connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      connectionString,
+      ssl: resolvePgSsl(connectionString),
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
@@ -18,8 +66,7 @@ const dbConfig = (process.env.POSTGRES_URL || process.env.DATABASE_URL)
       database: process.env.DB_NAME,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl:
-        process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+      ssl: resolvePgSsl(""),
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
