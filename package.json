@@ -13,6 +13,7 @@
     "migrate:status": "node-pg-migrate status -m src/migrations",
     "migrate:reset": "node src/scripts/reset.js",
     "seed": "node src/scripts/seed.js",
+    "backfill:rider-roles": "node src/scripts/backfill-rider-default-roles.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
