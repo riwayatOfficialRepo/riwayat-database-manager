@@ -11,7 +11,7 @@ exports.up =  (pgm) => {
 
 exports.down =  (pgm) => {
   pgm.sql(`DO $$ BEGIN
-        ALTER TABLE cases DROP COLUMN kitchen_id UUID;
+        ALTER TABLE cases DROP COLUMN IF EXISTS kitchen_id;
         EXCEPTION WHEN duplicate_column THEN NULL;
         END $$;
     `)
