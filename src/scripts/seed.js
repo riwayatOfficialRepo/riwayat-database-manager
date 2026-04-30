@@ -4,7 +4,7 @@
  * Seeds the database with sample data for:
  * - Kitchens and related mapping tables
  * - Admin users and roles
- * - Customers, customer favorites, and customer addresses
+ * - Customers, customer app permissions (RBAC), customer favorites, and customer addresses
  *
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
@@ -462,8 +462,9 @@ async function seed() {
     }
     logger.info({ count: customerIds.length }, "Customers seeded");
 
-    // ── 11.1 Customer Roles + User Roles (mapping) ───────────────
-    // Create a single default role: "Customer", then assign it to all seeded customers
+    // ── 11.1 Customer roles, app permissions, and user roles ───
+    // Default "Customer" role; same permission keys as migration
+    // 1773600000014_seed-customer-app-permissions.js
     await pool.query(`
       INSERT INTO customer_roles (name, label_key, description, status)
       VALUES
@@ -471,32 +472,56 @@ async function seed() {
       ON CONFLICT (name) DO NOTHING;
     `);
 
-    const customerRoleRes = await pool.query(
-      `SELECT id, name FROM customer_roles WHERE name = 'Customer' LIMIT 1`,
-    );
-    const customerRoleId = customerRoleRes.rows[0]?.id;
+    // label_key: same convention as kitchen_permissions — `perm.` + permission key (i18n lookup)
+    await pool.query(`
+      INSERT INTO customer_permissions (key, label_key, name) VALUES
+        ('customer.address.list', 'perm.customer.address.list', 'List delivery addresses'),
+        ('customer.address.default.get', 'perm.customer.address.default.get', 'Get default delivery address'),
+        ('customer.address.create', 'perm.customer.address.create', 'Create delivery address'),
+        ('customer.address.update', 'perm.customer.address.update', 'Update delivery address'),
+        ('customer.address.default.set', 'perm.customer.address.default.set', 'Set default delivery address'),
+        ('customer.address.delete', 'perm.customer.address.delete', 'Delete delivery address'),
+        ('customer.preference.list', 'perm.customer.preference.list', 'List preferences'),
+        ('customer.preference.key.get', 'perm.customer.preference.key.get', 'Get preferences by key'),
+        ('customer.preference.create', 'perm.customer.preference.create', 'Create preference'),
+        ('customer.preference.update', 'perm.customer.preference.update', 'Update preference'),
+        ('customer.preference.delete', 'perm.customer.preference.delete', 'Delete preference'),
+        ('customer.profile.get', 'perm.customer.profile.get', 'Get own profile'),
+        ('customer.profile.create', 'perm.customer.profile.create', 'Initiate profile create'),
+        ('customer.profile.update', 'perm.customer.profile.update', 'Initiate profile update'),
+        ('customer.profile.delete', 'perm.customer.profile.delete', 'Initiate profile delete'),
+        ('customer.kitchen.favorite.add', 'perm.customer.kitchen.favorite.add', 'Mark kitchen favorite'),
+        ('customer.kitchen.favorite.remove', 'perm.customer.kitchen.favorite.remove', 'Unmark kitchen favorite')
+      ON CONFLICT (key) DO UPDATE SET
+        label_key = EXCLUDED.label_key,
+        name = EXCLUDED.name;
+    `);
 
-    if (customerRoleId && customerIds.length > 0) {
-      for (const customerId of customerIds) {
-        await pool.query(
-          `
-            INSERT INTO customer_user_roles (customer_user_id, role_id, status)
-            VALUES ($1, $2, 'ACTIVE')
-            ON CONFLICT (customer_user_id, role_id) DO NOTHING
-          `,
-          [customerId, customerRoleId],
+    await pool.query(`
+      INSERT INTO customer_role_permissions (role_id, permission_id)
+      SELECT r.id, p.id
+      FROM customer_roles r
+      INNER JOIN customer_permissions p ON p.key LIKE 'customer.%'
+      WHERE r.name = 'Customer' AND r.status = 'ACTIVE'
+      ON CONFLICT (role_id, permission_id) DO NOTHING;
+    `);
+
+    await pool.query(`
+      INSERT INTO customer_user_roles (customer_user_id, role_id, status)
+      SELECT c.id, r.id, 'ACTIVE'
+      FROM customer c
+      CROSS JOIN customer_roles r
+      WHERE r.name = 'Customer' AND r.status = 'ACTIVE'
+        AND c.status IS DISTINCT FROM 'deleted'
+        AND NOT EXISTS (
+          SELECT 1 FROM customer_user_roles cur
+          WHERE cur.customer_user_id = c.id AND cur.role_id = r.id
         );
-      }
-      logger.info(
-        { roleId: customerRoleId, assignedCount: customerIds.length },
-        "Customer role assigned to customers",
-      );
-    } else {
-      logger.warn(
-        { hasRoleId: !!customerRoleId, customerCount: customerIds.length },
-        "Skipping customer role assignment (role missing or no customers)",
-      );
-    }
+    `);
+
+    logger.info(
+      "Customer app permissions seeded, granted to Customer role, user roles backfilled",
+    );
 
     // ── 12. Customer Favorites (Kitchens) ────────────────────────
     // Assign each customer some favorite kitchens
@@ -728,6 +753,10 @@ async function seed() {
     console.log("  admin_user_roles:         3 entries");
     console.log("  ──────────────────────────────────────");
     console.log("  customers:               3 entries");
+    console.log("  customer_roles:           1 entry");
+    console.log("  customer_permissions:    17 entries");
+    console.log("  customer_role_permissions: 17 entries");
+    console.log("  customer_user_roles:      (non-deleted customers)");
     console.log("  customer_favorites:      5 entries");
     console.log("  customer_addresses:      4 entries");
     console.log("========================================");
