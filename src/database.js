@@ -205,7 +205,6 @@ const connectDB = async () => {
     const result = await client.query("SELECT NOW()");
     console.log("🕒 Database time:", result.rows[0].now);
 
-    // Log initial stats
     monitor.logStats();
 
     client.release();
@@ -214,7 +213,8 @@ const connectDB = async () => {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     console.error("❌ Database connection failed:", errorMessage);
-    throw error;
+    logger.warn({ error: errorMessage }, "Pre-connection failed, will connect on-demand");
+    return null;
   }
 };
 
