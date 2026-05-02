@@ -5,6 +5,7 @@
  * - Kitchens and related mapping tables
  * - Admin users and roles
  * - Customers, customer app permissions (RBAC), customer favorites, and customer addresses
+ * - Chat permissions (admin / kitchen / customer) and grants to role_id = 1
  *
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
@@ -523,6 +524,96 @@ async function seed() {
       "Customer app permissions seeded, granted to Customer role, user roles backfilled",
     );
 
+    // ── 11.2 Chat permissions (upsert + grant role_id = 1) ───────
+    const chatPermissions = [
+      ["chat.initiate", "Allow initiating chat"],
+      ["chat.inbox", "Allow viewing chat inbox"],
+      ["chat.reference.get", "Allow fetching a chat by reference ID"],
+      ["chat.admin.customer.chats.view", "Allow viewing customer chats (admin/team)"],
+      ["chat.admin.kitchen.chats.view", "Allow viewing kitchen chats (admin/team)"],
+      ["chat.admin.team.chats.view", "Allow viewing team chats (admin/team)"],
+      ["chat.inbox.kitchen", "Allow viewing my kitchen chats"],
+      ["chat.details.get", "Allow viewing chat details"],
+      ["chat.close", "Allow closing a chat"],
+      ["chat.reopen", "Allow reopening a chat"],
+      ["chat.pin.toggle", "Allow toggling chat pin"],
+      ["chat.message.send", "Allow sending chat messages"],
+      ["chat.message.sendbulk", "Allow sending bulk chat messages"],
+      ["chat.message.list", "Allow listing chat messages"],
+      ["chat.message.delete", "Allow deleting a chat message"],
+      [
+        "chat.message.media.upload",
+        "Allow initiating upload of chat message media",
+      ],
+      ["chat.read.mark", "Allow marking chat as read/unread"],
+      ["chat.message.sync", "Allow syncing chat messages"],
+      [
+        "chat.unread.count",
+        "Allow viewing unread chats/messages count",
+      ],
+      ["chat.participant.mute", "Allow muting a chat participant"],
+      ["chat.participant.unmute", "Allow unmuting a chat participant"],
+      ["chat.participant.add", "Allow adding chat participants"],
+      [
+        "chat.participant.addnotes",
+        "Allow adding notes to a participant",
+      ],
+    ];
+
+    const chatPermTables = [
+      "admin_permissions",
+      "kitchen_permissions",
+      "customer_permissions",
+    ];
+
+    for (const tableName of chatPermTables) {
+      for (const [key, description] of chatPermissions) {
+        const labelKey = `perm.${key}`;
+        await pool.query(
+          `
+          INSERT INTO ${tableName} (key, label_key, name, description, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, NOW(), NOW())
+          ON CONFLICT (key) DO UPDATE SET
+            label_key = EXCLUDED.label_key,
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            updated_at = NOW(),
+            deleted_at = NULL
+        `,
+          [key, labelKey, key, description],
+        );
+      }
+    }
+    logger.info(
+      { tables: chatPermTables, count: chatPermissions.length },
+      "Chat permissions upserted into admin/kitchen/customer permission tables",
+    );
+
+    await pool.query(`
+      INSERT INTO admin_role_permissions (role_id, permission_id)
+      SELECT 1, p.id
+      FROM admin_permissions p
+      WHERE p.key LIKE 'chat.%'
+      ON CONFLICT (role_id, permission_id) DO NOTHING
+    `);
+    await pool.query(`
+      INSERT INTO kitchen_role_permissions (role_id, permission_id)
+      SELECT 1, p.id
+      FROM kitchen_permissions p
+      WHERE p.key LIKE 'chat.%'
+      ON CONFLICT (role_id, permission_id) DO NOTHING
+    `);
+    await pool.query(`
+      INSERT INTO customer_role_permissions (role_id, permission_id)
+      SELECT 1, p.id
+      FROM customer_permissions p
+      WHERE p.key LIKE 'chat.%'
+      ON CONFLICT (role_id, permission_id) DO NOTHING
+    `);
+    logger.info(
+      "Chat permissions granted to role_id=1 (admin, kitchen, customer)",
+    );
+
     // ── 12. Customer Favorites (Kitchens) ────────────────────────
     // Assign each customer some favorite kitchens
     // Customer 1 favorites: Kitchen 1 and Kitchen 2
@@ -743,8 +834,8 @@ async function seed() {
     console.log("  kitchens:                 3 entries");
     console.log("  kitchens_staging:         3 entries");
     console.log("  kitchen_roles:            3 entries");
-    console.log("  kitchen_permissions:      6 entries");
-    console.log("  kitchen_role_permissions: 12 entries");
+    console.log("  kitchen_permissions:      6 base + 23 chat.*");
+    console.log("  kitchen_role_permissions: 12 base + chat on role_id=1");
     console.log("  kitchen_users:            3 entries");
     console.log("  kitchen_user_roles:       3 entries");
     console.log("  ──────────────────────────────────────");
@@ -754,9 +845,11 @@ async function seed() {
     console.log("  ──────────────────────────────────────");
     console.log("  customers:               3 entries");
     console.log("  customer_roles:           1 entry");
-    console.log("  customer_permissions:    17 entries");
-    console.log("  customer_role_permissions: 17 entries");
+    console.log("  customer_permissions:    17 customer.* + 23 chat.*");
+    console.log("  customer_role_permissions: customer.* + chat on role_id=1");
     console.log("  customer_user_roles:      (non-deleted customers)");
+    console.log("  chat_permissions:         23 keys × 3 tables (upsert)");
+    console.log("  chat role_permissions:    role_id=1 (admin/kitchen/customer)");
     console.log("  customer_favorites:      5 entries");
     console.log("  customer_addresses:      4 entries");
     console.log("========================================");
