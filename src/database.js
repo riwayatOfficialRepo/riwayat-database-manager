@@ -51,14 +51,27 @@ function resolvePgSsl(connectionString) {
 const connectionString =
   process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
 
+// Neon's PgBouncer pooler terminates idle connections aggressively (~5s in
+// transaction mode). Keep min:0 so the pool never holds idle connections that
+// Neon will kill, and set idleTimeoutMillis below Neon's cutoff.
+function isNeonPooler(cs) {
+  try {
+    return new URL(cs).hostname.includes("-pooler.");
+  } catch {
+    return false;
+  }
+}
+
+const neon = connectionString && isNeonPooler(connectionString);
+
 // Hybrid Database configuration
 const dbConfig = connectionString
   ? {
       connectionString,
       ssl: resolvePgSsl(connectionString),
-      min: 2,
+      min: neon ? 0 : 2,
       max: 20,
-      idleTimeoutMillis: 30000,
+      idleTimeoutMillis: neon ? 4000 : 30000,
       connectionTimeoutMillis: 10000,
     }
   : {
