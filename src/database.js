@@ -56,6 +56,7 @@ const dbConfig = connectionString
   ? {
       connectionString,
       ssl: resolvePgSsl(connectionString),
+      min: 2,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
@@ -67,6 +68,7 @@ const dbConfig = connectionString
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       ssl: resolvePgSsl(""),
+      min: 2,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
