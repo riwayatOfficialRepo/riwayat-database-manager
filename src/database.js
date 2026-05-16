@@ -3,13 +3,6 @@ const path = require("path");
 const logger = require("./logger");
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
-/**
- * Whether to use TLS for `pg`. Local Postgres often has SSL off; cloud URLs need SSL.
- * - DATABASE_SSL=true / DB_SSL=true → enable SSL (rejectUnauthorized: false)
- * - DATABASE_SSL=false / DB_SSL=false → disable SSL
- * - PGSSLMODE=disable → disable SSL
- * - Else for connection-string mode: SSL off for localhost/127.0.0.1, on for other hosts
- */
 function resolvePgSsl(connectionString) {
   const explicitOff =
     process.env.DATABASE_SSL === "false" ||
@@ -17,62 +10,71 @@ function resolvePgSsl(connectionString) {
     process.env.DB_SSL === "false" ||
     process.env.DB_SSL === "0" ||
     process.env.PGSSLMODE === "disable";
+
+  if (explicitOff) return false;
+
   const explicitOn =
     process.env.DATABASE_SSL === "true" ||
     process.env.DATABASE_SSL === "1" ||
     process.env.DB_SSL === "true" ||
     process.env.DB_SSL === "1";
 
-  if (explicitOff) return false;
   if (explicitOn) return { rejectUnauthorized: false };
 
-  if (!connectionString) {
-    return process.env.DB_SSL === "true"
-      ? { rejectUnauthorized: false }
-      : false;
-  }
+  if (!connectionString) return false;
 
   try {
     const host = new URL(connectionString).hostname;
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "::1"
-    ) {
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
       return false;
     }
   } catch {
     /* fall through */
   }
 
+  // All remote hosts (AWS RDS, Aurora, RDS Proxy) require SSL
   return { rejectUnauthorized: false };
 }
 
-const connectionString =
-  process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
-
-// Neon's PgBouncer pooler terminates idle connections aggressively (~5s in
-// transaction mode). Keep min:0 so the pool never holds idle connections that
-// Neon will kill, and set idleTimeoutMillis below Neon's cutoff.
-function isNeonPooler(cs) {
+// RDS Proxy endpoints look like: *.proxy-<id>.<region>.rds.amazonaws.com
+// The proxy handles server-side pooling, so app-side pool settings can differ.
+function isRdsProxy(cs) {
   try {
-    return new URL(cs).hostname.includes("-pooler.");
+    const host = new URL(cs).hostname;
+    return host.includes(".proxy-") && host.endsWith(".rds.amazonaws.com");
   } catch {
     return false;
   }
 }
 
-const neon = connectionString && isNeonPooler(connectionString);
+const connectionString =
+  process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
 
-// Hybrid Database configuration
+const usingRdsProxy = Boolean(connectionString && isRdsProxy(connectionString));
+
+const MAX_POOL = parseInt(process.env.DB_POOL_MAX || "20", 10);
+const MIN_POOL = parseInt(process.env.DB_POOL_MIN || "2", 10);
+const IDLE_TIMEOUT_MS = parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10);
+const CONN_TIMEOUT_MS = parseInt(process.env.DB_CONN_TIMEOUT_MS || "10000", 10);
+// Threshold below which queries are not logged as slow
+const SLOW_QUERY_MS = parseInt(process.env.DB_SLOW_QUERY_MS || "500", 10);
+
+const baseConfig = {
+  min: MIN_POOL,
+  max: MAX_POOL,
+  idleTimeoutMillis: IDLE_TIMEOUT_MS,
+  connectionTimeoutMillis: CONN_TIMEOUT_MS,
+  // TCP keepalive prevents AWS NAT gateway from silently dropping idle connections
+  // (AWS kills connections idle for ~350 s without keepalives).
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+};
+
 const dbConfig = connectionString
   ? {
       connectionString,
       ssl: resolvePgSsl(connectionString),
-      min: neon ? 0 : 2,
-      max: 20,
-      idleTimeoutMillis: neon ? 4000 : 30000,
-      connectionTimeoutMillis: 10000,
+      ...baseConfig,
     }
   : {
       host: process.env.DB_HOST,
@@ -81,213 +83,106 @@ const dbConfig = connectionString
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       ssl: resolvePgSsl(""),
-      min: 2,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      ...baseConfig,
     };
 
-// Create a new pool instance
 const pool = new Pool(dbConfig);
 
-// Connection monitoring
-class ConnectionMonitor {
-  constructor() {
-    this.totalConnections = 0;
-    this.activeConnections = 0;
-    this.idleConnections = 0;
-    this.waitingClients = 0;
-    this.connectionStats = {
-      acquired: 0,
-      released: 0,
-      created: 0,
-      removed: 0,
-    };
-  }
+// --- Monitoring ---
 
-  updateStats() {
-    this.totalConnections = pool.totalCount;
-    this.idleConnections = pool.idleCount;
-    this.activeConnections = pool.totalCount - pool.idleCount;
-    this.waitingClients = pool.waitingCount;
-  }
-
-  getStats() {
-    this.updateStats();
-    return {
-      total: this.totalConnections,
-      active: this.activeConnections,
-      idle: this.idleConnections,
-      waiting: this.waitingClients,
-      max: pool.options.max || 20,
-      usage: `${this.activeConnections}/${pool.options.max || 20}`,
-      stats: this.connectionStats,
-    };
-  }
-
-  logStats() {
-    const stats = this.getStats();
-    console.log("📊 Database Connection Stats:", {
-      active: `${stats.active}/${stats.max}`,
-      idle: stats.idle,
-      waiting: stats.waiting,
-      usage: `${((stats.active / stats.max) * 100).toFixed(1)}%`,
-    });
-  }
-
-  incrementAcquired() {
-    this.connectionStats.acquired++;
-  }
-
-  incrementReleased() {
-    this.connectionStats.released++;
-  }
-
-  incrementCreated() {
-    this.connectionStats.created++;
-  }
-
-  incrementRemoved() {
-    this.connectionStats.removed++;
-  }
-}
-
-// Initialize monitor
-const monitor = new ConnectionMonitor();
-
-// Instrument the pool to track connections
-const originalQuery = pool.query.bind(pool);
-pool.query = function (queryTextOrConfig, values) {
-  monitor.incrementAcquired();
-  monitor.updateStats();
-
-  const startTime = Date.now();
-  return originalQuery(queryTextOrConfig, values)
-    .then((result) => {
-      monitor.incrementReleased();
-      monitor.updateStats();
-
-      const duration = Date.now() - startTime;
-      if (duration > 1000) {
-        // Log slow queries
-        const queryText =
-          typeof queryTextOrConfig === "string"
-            ? queryTextOrConfig
-            : queryTextOrConfig.text || "";
-        console.warn(`⚠️ Slow query detected: ${duration}ms`, {
-          query: queryText.substring(0, 100) + "...",
-        });
-      }
-
-      return result;
-    })
-    .catch((error) => {
-      monitor.incrementReleased();
-      monitor.updateStats();
-      throw error;
-    });
+const _stats = {
+  connections: { created: 0, removed: 0 },
+  queries: { executed: 0, slow: 0, errors: 0 },
 };
 
-// Track connection lifecycle
+function getPoolStats() {
+  const active = pool.totalCount - pool.idleCount;
+  return {
+    total: pool.totalCount,
+    active,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+    max: MAX_POOL,
+    usage: `${active}/${MAX_POOL}`,
+    lifetime: _stats,
+  };
+}
+
 pool.on("connect", () => {
-  monitor.incrementCreated();
-  monitor.updateStats();
-  console.log("🔗 New database connection created");
-});
-
-pool.on("acquire", () => {
-  monitor.incrementAcquired();
-  monitor.updateStats();
-});
-
-pool.on("release", () => {
-  monitor.incrementReleased();
-  monitor.updateStats();
+  _stats.connections.created++;
 });
 
 pool.on("remove", () => {
-  monitor.incrementRemoved();
-  monitor.updateStats();
-  console.log("🗑️ Database connection removed");
+  _stats.connections.removed++;
 });
 
-// Test database connection
+pool.on("error", (err) => {
+  logger.error({ err }, "Unexpected error on idle DB client");
+});
+
+// Wrap pool.query for slow-query detection only.
+// Do NOT track acquire/release here — pool events handle that without double-counting.
+const _query = pool.query.bind(pool);
+pool.query = function (queryTextOrConfig, values) {
+  const t0 = Date.now();
+  _stats.queries.executed++;
+
+  return _query(queryTextOrConfig, values)
+    .then((result) => {
+      const ms = Date.now() - t0;
+      if (ms > SLOW_QUERY_MS) {
+        _stats.queries.slow++;
+        const text =
+          typeof queryTextOrConfig === "string"
+            ? queryTextOrConfig
+            : queryTextOrConfig.text || "";
+        logger.warn({ ms, query: text.slice(0, 120) }, "Slow query");
+      }
+      return result;
+    })
+    .catch((err) => {
+      _stats.queries.errors++;
+      throw err;
+    });
+};
+
+// --- Public API ---
+
 const connectDB = async () => {
   try {
     const client = await pool.connect();
-    console.log("✅ PostgreSQL database connected successfully");
-
-    const result = await client.query("SELECT NOW()");
-    console.log("🕒 Database time:", result.rows[0].now);
-
-    monitor.logStats();
-
+    const { rows } = await client.query("SELECT NOW()");
     client.release();
+    logger.info(
+      { dbTime: rows[0].now, pool: getPoolStats(), usingRdsProxy },
+      "PostgreSQL connected",
+    );
     return pool;
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("❌ Database connection failed:", errorMessage);
-    logger.warn({ error: errorMessage }, "Pre-connection failed, will connect on-demand");
+    logger.warn({ error: error.message }, "Pre-connection failed, will connect on-demand");
     return null;
   }
 };
 
-// Handle pool errors
-pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client", err);
-  monitor.updateStats();
-});
-
-// Export monitoring functions
-const getConnectionStats = () => monitor.getStats();
-const logConnectionStats = () => monitor.logStats();
-
-// Auto-log stats every 30 seconds (optional)
-if (process.env.NODE_ENV === "development") {
-  setInterval(() => {
-    monitor.logStats();
-  }, 30000);
-}
-
-// Graceful shutdown
-process.on("SIGINT", async () => {
-  console.log("🛑 Shutting down database pool...");
-
-  // Log final stats
-  const finalStats = monitor.getStats();
-  console.log("📊 Final connection stats:", finalStats);
-
-  await pool.end();
-  console.log("✅ Database pool closed");
-  process.exit(0);
-});
-
-// Health check endpoint helper
 const healthCheck = async () => {
   try {
-    const stats = monitor.getStats();
-    await pool.query("SELECT 1 as health_check");
-
+    await pool.query("SELECT 1");
     return {
       status: "healthy",
       database: "connected",
-      connections: stats,
+      connections: getPoolStats(),
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
     return {
       status: "unhealthy",
       database: "disconnected",
-      error: errorMessage,
+      error: error.message,
       timestamp: new Date().toISOString(),
     };
   }
 };
 
-// Execute a single query with logging
 const executeQuery = async (sql, params = [], client = null) => {
   const db = client || pool;
   try {
@@ -300,7 +195,6 @@ const executeQuery = async (sql, params = [], client = null) => {
   }
 };
 
-// Execute operation within a database transaction
 const executeTransaction = async (
   operation,
   context = {},
@@ -309,48 +203,51 @@ const executeTransaction = async (
   moduleName = "TransactionHelper",
 ) => {
   const client = await pool.connect();
-
   try {
     log.info(context, `[${moduleName}] ${operationName} - START`);
     await client.query("BEGIN");
-
     const result = await operation(client);
-
     await client.query("COMMIT");
     log.info(context, `[${moduleName}] ${operationName} - COMPLETE`);
     return result;
   } catch (error) {
-    const safeError = {
-      message: error.message,
-      stack: error.stack,
-      ...error,
-    };
-
     log.error(
-      { ...context, error: safeError },
+      { ...context, error: { message: error.message, stack: error.stack } },
       `[${moduleName}] ${operationName} - ERROR`,
     );
-
     try {
       await client.query("ROLLBACK");
       log.info(context, `[${moduleName}] ${operationName} - ROLLBACK COMPLETE`);
     } catch (rollbackErr) {
       log.error({ rollbackErr }, `[${moduleName}] Rollback failed`);
     }
-
     throw error;
   } finally {
     client.release();
   }
 };
 
+// Graceful shutdown — SIGTERM is sent by AWS ECS/EC2/Fargate stop events;
+// SIGINT is sent by Ctrl-C in local/dev environments.
+async function shutdown(signal) {
+  logger.info({ signal, pool: getPoolStats() }, "Shutting down DB pool");
+  await pool.end();
+  logger.info("DB pool closed");
+  process.exit(0);
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+if (process.env.NODE_ENV === "development") {
+  setInterval(() => logger.info(getPoolStats(), "DB pool stats"), 30000).unref();
+}
+
 module.exports = {
-  connectDB,
   pool,
-  query: pool.query.bind(pool),
+  connectDB,
+  healthCheck,
   executeQuery,
   executeTransaction,
-  getConnectionStats,
-  logConnectionStats,
-  healthCheck,
+  getPoolStats,
+  query: pool.query.bind(pool),
 };
