@@ -36,8 +36,18 @@ function resolvePgSsl(connectionString) {
   return { rejectUnauthorized: false };
 }
 
+// Neon's PgBouncer pooler (transaction mode) terminates idle connections
+// aggressively (~5 s). Keep min:0 so the pool never holds connections that
+// Neon will kill, and set idleTimeoutMillis below Neon's cutoff.
+function isNeonPooler(cs) {
+  try {
+    return new URL(cs).hostname.includes("-pooler.");
+  } catch {
+    return false;
+  }
+}
+
 // RDS Proxy endpoints look like: *.proxy-<id>.<region>.rds.amazonaws.com
-// The proxy handles server-side pooling, so app-side pool settings can differ.
 function isRdsProxy(cs) {
   try {
     const host = new URL(cs).hostname;
@@ -50,11 +60,15 @@ function isRdsProxy(cs) {
 const connectionString =
   process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
 
+const neon = Boolean(connectionString && isNeonPooler(connectionString));
 const usingRdsProxy = Boolean(connectionString && isRdsProxy(connectionString));
 
 const MAX_POOL = parseInt(process.env.DB_POOL_MAX || "20", 10);
-const MIN_POOL = parseInt(process.env.DB_POOL_MIN || "2", 10);
-const IDLE_TIMEOUT_MS = parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10);
+// Neon: min 0 — never hold idle connections the pooler will kill.
+// Others: min 2 — keep warm connections ready.
+const MIN_POOL = parseInt(process.env.DB_POOL_MIN || (neon ? "0" : "2"), 10);
+// Neon: evict idle connections after 4 s (below Neon's ~5 s cutoff).
+const IDLE_TIMEOUT_MS = parseInt(process.env.DB_IDLE_TIMEOUT_MS || (neon ? "4000" : "30000"), 10);
 const CONN_TIMEOUT_MS = parseInt(process.env.DB_CONN_TIMEOUT_MS || "10000", 10);
 // Threshold below which queries are not logged as slow
 const SLOW_QUERY_MS = parseInt(process.env.DB_SLOW_QUERY_MS || "500", 10);
@@ -154,7 +168,7 @@ const connectDB = async () => {
     const { rows } = await client.query("SELECT NOW()");
     client.release();
     logger.info(
-      { dbTime: rows[0].now, pool: getPoolStats(), usingRdsProxy },
+      { dbTime: rows[0].now, pool: getPoolStats(), neon, usingRdsProxy },
       "PostgreSQL connected",
     );
     return pool;
