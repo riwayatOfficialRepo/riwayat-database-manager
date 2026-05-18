@@ -529,8 +529,14 @@ async function seed() {
       ["chat.initiate", "Allow initiating chat"],
       ["chat.inbox", "Allow viewing chat inbox"],
       ["chat.reference.get", "Allow fetching a chat by reference ID"],
-      ["chat.admin.customer.chats.view", "Allow viewing customer chats (admin/team)"],
-      ["chat.admin.kitchen.chats.view", "Allow viewing kitchen chats (admin/team)"],
+      [
+        "chat.admin.customer.chats.view",
+        "Allow viewing customer chats (admin/team)",
+      ],
+      [
+        "chat.admin.kitchen.chats.view",
+        "Allow viewing kitchen chats (admin/team)",
+      ],
       ["chat.admin.team.chats.view", "Allow viewing team chats (admin/team)"],
       ["chat.inbox.kitchen", "Allow viewing my kitchen chats"],
       ["chat.details.get", "Allow viewing chat details"],
@@ -547,17 +553,11 @@ async function seed() {
       ],
       ["chat.read.mark", "Allow marking chat as read/unread"],
       ["chat.message.sync", "Allow syncing chat messages"],
-      [
-        "chat.unread.count",
-        "Allow viewing unread chats/messages count",
-      ],
+      ["chat.unread.count", "Allow viewing unread chats/messages count"],
       ["chat.participant.mute", "Allow muting a chat participant"],
       ["chat.participant.unmute", "Allow unmuting a chat participant"],
       ["chat.participant.add", "Allow adding chat participants"],
-      [
-        "chat.participant.addnotes",
-        "Allow adding notes to a participant",
-      ],
+      ["chat.participant.addnotes", "Allow adding notes to a participant"],
     ];
 
     const chatPermTables = [
@@ -849,7 +849,9 @@ async function seed() {
     console.log("  customer_role_permissions: customer.* + chat on role_id=1");
     console.log("  customer_user_roles:      (non-deleted customers)");
     console.log("  chat_permissions:         23 keys × 3 tables (upsert)");
-    console.log("  chat role_permissions:    role_id=1 (admin/kitchen/customer)");
+    console.log(
+      "  chat role_permissions:    role_id=1 (admin/kitchen/customer)",
+    );
     console.log("  customer_favorites:      5 entries");
     console.log("  customer_addresses:      4 entries");
     console.log("========================================");
