@@ -63,7 +63,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT kitchen_user_invitations_invited_by_id_fkey
         FOREIGN KEY (invited_by_id) REFERENCES kitchen_users(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

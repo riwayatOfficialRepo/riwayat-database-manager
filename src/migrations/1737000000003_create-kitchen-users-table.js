@@ -25,14 +25,14 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE kitchen_users ADD CONSTRAINT kitchen_users_phone_key UNIQUE (phone);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE kitchen_users ADD CONSTRAINT uniq_user_per_kitchen UNIQUE (id, kitchen_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

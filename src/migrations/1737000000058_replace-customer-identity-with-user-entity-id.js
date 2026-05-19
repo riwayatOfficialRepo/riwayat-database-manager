@@ -26,7 +26,7 @@ exports.up = (pgm) => {
       ADD CONSTRAINT fk_customer_user_entity
       FOREIGN KEY (user_entity_id) REFERENCES user_entities(id)
       ON UPDATE CASCADE ON DELETE RESTRICT;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

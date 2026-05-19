@@ -22,7 +22,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability
         ADD CONSTRAINT fk_kitchen_availability_kitchen_id
         FOREIGN KEY (kitchen_id) REFERENCES kitchens(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -31,7 +31,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability
         ADD CONSTRAINT kitchen_availability_day_of_week_id_fkey
         FOREIGN KEY (day_of_week_id) REFERENCES days_of_week(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -40,7 +40,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability
         ADD CONSTRAINT kitchen_availability_slot_id_fkey
         FOREIGN KEY (slot_id) REFERENCES kitchen_availability_slots(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

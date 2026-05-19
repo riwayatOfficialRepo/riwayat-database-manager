@@ -12,7 +12,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_user_roles
         ADD CONSTRAINT kitchen_user_roles_kitchen_user_id_fkey
         FOREIGN KEY (kitchen_user_id) REFERENCES kitchen_users(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -21,14 +21,14 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_user_roles
         ADD CONSTRAINT kitchen_user_roles_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES kitchen_roles(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE kitchen_user_roles ADD CONSTRAINT kitchen_user_roles_user_role_key UNIQUE (kitchen_user_id, role_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

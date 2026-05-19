@@ -22,7 +22,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variants ADD CONSTRAINT dish_variants_fixed_delivery_day_fkey
         FOREIGN KEY (fixed_delivery_day) REFERENCES days_of_week(id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -31,7 +31,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variants ADD CONSTRAINT dish_variants_fixed_delivery_slot_fkey
         FOREIGN KEY (fixed_delivery_slot) REFERENCES kitchen_availability_slots(id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -54,7 +54,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variants_staging ADD CONSTRAINT dish_variants_staging_fixed_delivery_day_fkey
         FOREIGN KEY (fixed_delivery_day) REFERENCES days_of_week(id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -63,7 +63,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variants_staging ADD CONSTRAINT dish_variants_staging_fixed_delivery_slot_fkey
         FOREIGN KEY (fixed_delivery_slot) REFERENCES kitchen_availability_slots(id)
         ON UPDATE NO ACTION ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

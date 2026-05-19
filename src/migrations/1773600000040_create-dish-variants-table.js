@@ -35,7 +35,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_variants ADD CONSTRAINT dish_variants_preparation_mode_check
         CHECK (preparation_mode = ANY (ARRAY['ready', 'pre_order']));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -43,7 +43,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_variants ADD CONSTRAINT dish_variants_preparation_unit_check
         CHECK (preparation_unit = ANY (ARRAY['minutes', 'hours']));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -92,7 +92,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variants_staging ADD CONSTRAINT dish_variants_staging_dish_variant_id_fkey
         FOREIGN KEY (dish_variant_id) REFERENCES dish_variants(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -100,7 +100,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_variants_staging ADD CONSTRAINT dish_variants_staging_preparation_mode_check
         CHECK (preparation_mode = ANY (ARRAY['ready', 'pre_order']));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -108,7 +108,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_variants_staging ADD CONSTRAINT dish_variants_staging_preparation_unit_check
         CHECK (preparation_unit = ANY (ARRAY['minutes', 'hours', 'days']));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

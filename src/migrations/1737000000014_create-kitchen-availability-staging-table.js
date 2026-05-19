@@ -23,7 +23,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability_staging
         ADD CONSTRAINT kitchen_availability_staging_kitchen_availability_id_fkey
         FOREIGN KEY (kitchen_availability_id) REFERENCES kitchen_availability(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -32,7 +32,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability_staging
         ADD CONSTRAINT kitchen_availability_staging_kitchen_staging_id_fkey
         FOREIGN KEY (kitchen_staging_id) REFERENCES kitchens_staging(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -41,7 +41,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability_staging
         ADD CONSTRAINT kitchen_availability_staging_day_of_week_id_fkey
         FOREIGN KEY (day_of_week_id) REFERENCES days_of_week(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -50,7 +50,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_availability_staging
         ADD CONSTRAINT kitchen_availability_staging_slot_id_fkey
         FOREIGN KEY (slot_id) REFERENCES kitchen_availability_slots(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

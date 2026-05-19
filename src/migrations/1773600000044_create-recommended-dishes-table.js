@@ -42,7 +42,7 @@ exports.up = (pgm) => {
       ALTER TABLE recommended_dishes ADD CONSTRAINT fk_recommended_dishes_dish
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -51,7 +51,7 @@ exports.up = (pgm) => {
       ALTER TABLE recommended_dishes ADD CONSTRAINT fk_recommended_dishes_variant
         FOREIGN KEY (dish_variant_id) REFERENCES dish_variants(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -81,7 +81,7 @@ exports.up = (pgm) => {
       ALTER TABLE recommended_dishes_staging ADD CONSTRAINT fk_recommended_dishes_staging_dish
         FOREIGN KEY (dish_staging_id) REFERENCES dishes_staging(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -90,7 +90,7 @@ exports.up = (pgm) => {
       ALTER TABLE recommended_dishes_staging ADD CONSTRAINT fk_recommended_dishes_staging_variant
         FOREIGN KEY (dish_variant_staging_id) REFERENCES dish_variants_staging(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -99,7 +99,7 @@ exports.up = (pgm) => {
       ALTER TABLE recommended_dishes_staging ADD CONSTRAINT fk_recommended_dishes_staging_main
         FOREIGN KEY (recommended_dish_id) REFERENCES recommended_dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

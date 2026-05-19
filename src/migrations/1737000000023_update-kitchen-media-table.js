@@ -38,7 +38,7 @@ exports.up = (pgm) => {
       ALTER TABLE kitchen_media
         ADD CONSTRAINT fk_kitchen_media_kitchen
         FOREIGN KEY (kitchen_id) REFERENCES kitchens(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };
@@ -74,7 +74,7 @@ exports.down = (pgm) => {
       ALTER TABLE kitchen_media
         ADD CONSTRAINT fk_kitchen
         FOREIGN KEY (kitchen_id) REFERENCES kitchens(id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

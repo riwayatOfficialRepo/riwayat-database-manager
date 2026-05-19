@@ -18,7 +18,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_cuisine_map ADD CONSTRAINT dish_cuisine_map_cuisine_id_fkey
         FOREIGN KEY (cuisine_id) REFERENCES dish_cuisines(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -35,7 +35,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_cuisine_map_staging ADD CONSTRAINT dish_cuisine_map_staging_dish_cuisine_map_id_fkey
         FOREIGN KEY (dish_cuisine_map_id) REFERENCES dish_cuisine_map(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -54,7 +54,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_tag_map ADD CONSTRAINT dish_tag_map_tag_id_fkey
         FOREIGN KEY (tag_id) REFERENCES dish_tags(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -71,7 +71,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_tag_map_staging ADD CONSTRAINT dish_tag_map_staging_dish_tag_map_id_fkey
         FOREIGN KEY (dish_tag_map_id) REFERENCES dish_tag_map(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -90,7 +90,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_dietary_map ADD CONSTRAINT dish_dietary_map_dietary_id_fkey
         FOREIGN KEY (dietary_id) REFERENCES dish_dietary_flags(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -107,7 +107,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_dietary_map_staging ADD CONSTRAINT dish_dietary_map_staging_dish_dietary_map_id_fkey
         FOREIGN KEY (dish_dietary_map_id) REFERENCES dish_dietary_map(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

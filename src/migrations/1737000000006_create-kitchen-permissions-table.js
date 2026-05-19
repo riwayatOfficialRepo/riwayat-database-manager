@@ -13,7 +13,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE kitchen_permissions ADD CONSTRAINT kitchen_permissions_key_key UNIQUE (key);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

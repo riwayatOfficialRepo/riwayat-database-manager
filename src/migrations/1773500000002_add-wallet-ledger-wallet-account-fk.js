@@ -5,7 +5,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT wallet_ledger_wallet_account_id_fkey
         FOREIGN KEY (wallet_account_id) REFERENCES wallet_accounts (wallet_account_id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

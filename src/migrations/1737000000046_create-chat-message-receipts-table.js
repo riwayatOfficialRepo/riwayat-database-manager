@@ -10,7 +10,7 @@ exports.up = (pgm) => {
         'DELIVERED',
         'READ'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

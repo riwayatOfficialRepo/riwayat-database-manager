@@ -50,7 +50,7 @@ exports.down = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       CREATE TYPE chat_media_type AS ENUM ('image', 'audio', 'file');
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

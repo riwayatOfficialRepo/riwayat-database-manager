@@ -12,7 +12,7 @@ exports.up = (pgm) => {
         'RIDER',
         'ADMIN'     -- Backend/Admin (roles are dynamic)
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -23,7 +23,7 @@ exports.up = (pgm) => {
         'LEFT',
         'BANNED'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -35,7 +35,7 @@ exports.up = (pgm) => {
         'ADMIN_BRAND',
         'RIDER_PERSONAL'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

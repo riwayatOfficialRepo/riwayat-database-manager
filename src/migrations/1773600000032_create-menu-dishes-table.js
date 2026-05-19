@@ -38,7 +38,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE menu_dishes
         ADD CONSTRAINT uq_menu_dish UNIQUE (menu_id, dish_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -46,7 +46,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE menu_dishes
         ADD CONSTRAINT uq_menu_order UNIQUE (menu_id, display_order);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -56,7 +56,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT fk_menu
         FOREIGN KEY (menu_id) REFERENCES menus(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -66,7 +66,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT fk_dish
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

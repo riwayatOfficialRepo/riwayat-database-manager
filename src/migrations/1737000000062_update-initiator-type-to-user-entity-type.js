@@ -62,7 +62,7 @@ exports.down = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       CREATE TYPE chat_participant_role AS ENUM ('CUSTOMER', 'PARTNER', 'RIDER', 'ADMIN');
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -93,7 +93,7 @@ exports.down = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       CREATE TYPE chat_initiator_type AS ENUM ('CUSTOMER', 'KITCHEN_USER', 'RIDER', 'ADMIN');
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
