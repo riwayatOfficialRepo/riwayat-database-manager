@@ -6,6 +6,7 @@
  * - Admin users and roles
  * - Customers, customer app permissions (RBAC), customer favorites, and customer addresses
  * - Chat permissions (admin / kitchen / customer) and grants to role_id = 1
+ * - Corporate portal permissions (company_user_permissions)
  *
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
@@ -288,7 +289,7 @@ async function seed() {
     // ── 8. Admin Users ─────────────────────────────────────────────
     // password_hash is bcrypt of 'admin123' - CHANGE IN PRODUCTION
     const adminPasswordHash =
-      "$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36zQvzsMv1Ri0Pg/DmhXrMC";
+      "$2b$10$0R6Ziza0fFd7pmtV08F7XuhT8WwO8hoXMEPDKe2t3Y6/rAM6mzk/m";
 
     const adminUsersResult = await pool.query(`
       INSERT INTO admin_users (name, email, phone, password_hash, is_active)
@@ -381,6 +382,221 @@ async function seed() {
       ON CONFLICT (role_id, permission_id) DO NOTHING;
     `);
     logger.info("Admin rider list permission seeded and granted to role_id=1");
+
+    // ── 10.2 Corporate company user permissions ───────────────────
+    const corporatePermissionKeys = [
+      "corporate.company.list.view",
+      "corporate.company.detail.view",
+      "corporate.company_user.list.view",
+      "corporate.company_user.detail.view",
+      "corporate.company_user.activate",
+      "corporate.company_user.deactivate",
+      "corporate.company_user.edit",
+      "corporate.employee.activate",
+      "corporate.employee.deactivate",
+      "corporate.employee.list.view",
+      "corporate.employee.detail.view",
+      "corporate.employee.edit",
+    ];
+
+    await pool.query(
+      `
+      DELETE FROM admin_role_permissions arp
+      USING admin_permissions p
+      WHERE arp.permission_id = p.id
+        AND p.key = ANY($1::text[])
+    `,
+      [corporatePermissionKeys],
+    );
+
+    await pool.query(
+      `
+      DELETE FROM admin_permissions
+      WHERE key = ANY($1::text[])
+    `,
+      [corporatePermissionKeys],
+    );
+
+    await pool.query(`
+      INSERT INTO company_user_permissions (key, label_key, name, description) VALUES
+        ('corporate.company.list.view', 'perm.corporate.company.list.view', 'List companies', 'Corporate portal: list companies'),
+        ('corporate.company.detail.view', 'perm.corporate.company.detail.view', 'View company', 'Corporate portal: view company by id'),
+        ('corporate.company_user.list.view', 'perm.corporate.company_user.list.view', 'List company users', 'Corporate portal: list company users'),
+        ('corporate.company_user.detail.view', 'perm.corporate.company_user.detail.view', 'View company user', 'Corporate portal: view company user by id'),
+        ('corporate.company_user.activate', 'perm.corporate.company_user.activate', 'Activate company user', 'Corporate portal: activate company user'),
+        ('corporate.company_user.deactivate', 'perm.corporate.company_user.deactivate', 'Deactivate company user', 'Corporate portal: deactivate company user'),
+        ('corporate.company_user.edit', 'perm.corporate.company_user.edit', 'Edit company user', 'Corporate portal: edit company user'),
+        ('corporate.employee.activate', 'perm.corporate.employee.activate', 'Activate employee', 'Corporate portal: activate employee'),
+        ('corporate.employee.deactivate', 'perm.corporate.employee.deactivate', 'Deactivate employee', 'Corporate portal: deactivate employee'),
+        ('corporate.employee.list.view', 'perm.corporate.employee.list.view', 'List employees', 'Corporate portal: list employees'),
+        ('corporate.employee.detail.view', 'perm.corporate.employee.detail.view', 'View employee', 'Corporate portal: view employee by id'),
+        ('corporate.employee.edit', 'perm.corporate.employee.edit', 'Edit employee', 'Corporate portal: edit employee')
+      ON CONFLICT (key) DO UPDATE SET
+        label_key = EXCLUDED.label_key,
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        updated_at = NOW();
+    `);
+    logger.info(
+      { count: corporatePermissionKeys.length },
+      "Corporate company user permissions seeded into company_user_permissions",
+    );
+
+    await pool.query(`
+      INSERT INTO company_roles (name, label_key, description, status)
+      VALUES ('corporate_admin', 'role.corporate_admin', 'Full corporate portal access for local testing', 'ACTIVE')
+      ON CONFLICT (name) DO UPDATE SET
+        label_key = EXCLUDED.label_key,
+        description = EXCLUDED.description,
+        status = EXCLUDED.status,
+        updated_at = NOW(),
+        deleted_at = NULL;
+    `);
+
+    const corporateRoleResult = await pool.query(
+      `SELECT id FROM company_roles WHERE name = 'corporate_admin' AND status = 'ACTIVE' LIMIT 1`,
+    );
+    const corporateRoleId = corporateRoleResult.rows[0]?.id;
+
+    await pool.query(
+      `
+      INSERT INTO company_role_permissions (role_id, permission_id)
+      SELECT $1, p.id
+      FROM company_user_permissions p
+      WHERE p.key = ANY($2::text[])
+      ON CONFLICT (role_id, permission_id) DO NOTHING;
+    `,
+      [corporateRoleId, corporatePermissionKeys],
+    );
+
+    const corporateTestCompanyId = "33333333-3333-4333-8333-333333333333";
+    const corporateTestCompanyResult = await pool.query(
+      `
+      INSERT INTO companies (
+        id,
+        company_code,
+        name,
+        primary_email,
+        primary_phone,
+        primary_contact_name,
+        website,
+        tax_id,
+        status,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        'POSTMAN-CORP',
+        'Postman Test Company',
+        'corporate.admin@riwayat.com',
+        '+923001234567',
+        'Postman Corporate Admin',
+        'https://riwayat.com',
+        'TAX-POSTMAN-CORP',
+        'active',
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (company_code) DO UPDATE SET
+        id = EXCLUDED.id,
+        name = EXCLUDED.name,
+        primary_email = EXCLUDED.primary_email,
+        primary_phone = EXCLUDED.primary_phone,
+        primary_contact_name = EXCLUDED.primary_contact_name,
+        website = EXCLUDED.website,
+        tax_id = EXCLUDED.tax_id,
+        status = 'active',
+        updated_at = NOW()
+      RETURNING id, company_code, name;
+    `,
+      [corporateTestCompanyId],
+    );
+    const corporateTestCompany = corporateTestCompanyResult.rows[0];
+
+    const corporateTestUserId = "22222222-2222-4222-8222-222222222222";
+    await pool.query(
+      `
+      DELETE FROM company_user
+      WHERE email = 'corporate.admin@riwayat.com'
+        AND id <> $1
+    `,
+      [corporateTestUserId],
+    );
+
+    const corporateTestUserResult = await pool.query(
+      `
+      INSERT INTO company_user (
+        id,
+        name,
+        email,
+        company_code,
+        phone,
+        password_hash,
+        is_active,
+        status,
+        user_entity_type,
+        business_reference,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        'Postman Corporate Admin',
+        'corporate.admin@riwayat.com',
+        $3,
+        '+923001234567',
+        $2,
+        true,
+        'ACTIVE',
+        'TEAM',
+        $4,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (email) DO UPDATE SET
+        name = EXCLUDED.name,
+        company_code = EXCLUDED.company_code,
+        phone = EXCLUDED.phone,
+        password_hash = EXCLUDED.password_hash,
+        is_active = true,
+        status = 'ACTIVE',
+        user_entity_type = EXCLUDED.user_entity_type,
+        business_reference = EXCLUDED.business_reference,
+        updated_at = NOW(),
+        deleted_at = NULL
+      RETURNING id, name, email, phone;
+    `,
+      [
+        corporateTestUserId,
+        adminPasswordHash,
+        corporateTestCompany.company_code,
+        corporateTestCompany.id,
+      ],
+    );
+    const corporateTestUser = corporateTestUserResult.rows[0];
+
+    await pool.query(
+      `
+      INSERT INTO company_user_roles (company_user_id, role_id, status)
+      VALUES ($1, $2, 'ACTIVE')
+      ON CONFLICT (company_user_id, role_id) DO UPDATE SET
+        status = 'ACTIVE',
+        updated_at = NOW(),
+        deleted_at = NULL;
+    `,
+      [corporateTestUser.id, corporateRoleId],
+    );
+    logger.info(
+      {
+        userId: corporateTestUser.id,
+        email: corporateTestUser.email,
+        companyId: corporateTestCompany.id,
+        companyCode: corporateTestCompany.company_code,
+        roleId: corporateRoleId,
+      },
+      "Postman corporate admin user seeded",
+    );
 
     // ── 11. Customers ────────────────────────────────────────────
     const customersData = [
@@ -842,6 +1058,10 @@ async function seed() {
     console.log("  admin_users:              3 entries");
     console.log("  admin_roles:              3 entries");
     console.log("  admin_user_roles:         3 entries");
+    console.log("  company_user_permissions: 12 corporate.* keys");
+    console.log("  company_roles:            1 corporate_admin role");
+    console.log("  companies:                1 Postman test company");
+    console.log("  company_user:             1 Postman test admin");
     console.log("  ──────────────────────────────────────");
     console.log("  customers:               3 entries");
     console.log("  customer_roles:           1 entry");

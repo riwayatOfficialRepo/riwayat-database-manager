@@ -16,6 +16,7 @@ exports.up = (pgm) => {
       },
       name: { type: 'text', notNull: true },
       email: { type: 'text', notNull: true },
+      company_code: { type: 'varchar(50)', notNull: true },
       phone: { type: 'text' },
       password_hash: { type: 'text', notNull: true },
       is_active: { type: 'boolean', default: true },
@@ -34,9 +35,23 @@ exports.up = (pgm) => {
     { ifNotExists: true },
   );
 
+  pgm.sql(`
+    DO $$ BEGIN
+      ALTER TABLE company_user
+        ADD CONSTRAINT company_user_company_code_fkey
+        FOREIGN KEY (company_code) REFERENCES companies(company_code)
+        ON UPDATE CASCADE ON DELETE RESTRICT;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
+    END $$;
+  `);
+
   pgm.sql(
     'CREATE UNIQUE INDEX IF NOT EXISTS company_user_email_key ON company_user (email)',
   );
+  pgm.createIndex('company_user', 'company_code', {
+    name: 'idx_company_user_company_code',
+    ifNotExists: true,
+  });
   pgm.sql(
     'CREATE UNIQUE INDEX IF NOT EXISTS company_user_phone_key ON company_user (phone)',
   );
@@ -65,6 +80,7 @@ exports.down = (pgm) => {
   pgm.sql('DROP INDEX IF EXISTS idx_company_user_id');
   pgm.sql('DROP INDEX IF EXISTS idx_company_user_deleted_at');
   pgm.sql('DROP INDEX IF EXISTS idx_company_user_active_status');
+  pgm.sql('DROP INDEX IF EXISTS idx_company_user_company_code');
   pgm.sql('DROP INDEX IF EXISTS company_user_email_active_idx');
   pgm.sql('DROP INDEX IF EXISTS company_user_phone_key');
   pgm.sql('DROP INDEX IF EXISTS company_user_email_key');
