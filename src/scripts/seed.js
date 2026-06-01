@@ -383,7 +383,150 @@ async function seed() {
     `);
     logger.info("Admin rider list permission seeded and granted to role_id=1");
 
-    // ── 10.2 Corporate company user permissions ───────────────────
+    // ── 10.2 Admin RBAC Permissions (super_admin gets all) ────────
+    const adminRbacPermissions = [
+      // USER
+      ["admin.user.create",                   "Create admin user"],
+      ["admin.user.list.view",                "List admin users"],
+      ["admin.user.delete",                   "Delete admin user"],
+      ["admin.user.edit",                     "Edit admin user"],
+      ["admin.user.activate",                 "Activate admin user"],
+      ["admin.user.deactivate",               "Deactivate admin user"],
+      ["admin.user.reset.pin",                "Reset admin user PIN"],
+      // ROLE
+      ["admin.role.create",                   "Create admin role"],
+      ["admin.role.edit",                     "Edit admin role"],
+      ["admin.role.delete",                   "Delete admin role"],
+      ["admin.role.list.view",                "List admin roles"],
+      // PERMISSION
+      ["admin.permission.create",             "Create admin permission"],
+      ["admin.permission.edit",               "Edit admin permission"],
+      ["admin.permission.delete",             "Delete admin permission"],
+      ["admin.permission.list.view",          "List admin permissions"],
+      // KITCHEN
+      ["admin.kitchen.create",                "Create kitchen"],
+      ["admin.kitchen.edit",                  "Edit kitchen"],
+      ["admin.kitchen.delete",                "Delete kitchen"],
+      ["admin.kitchen.list.view",             "List kitchens"],
+      ["admin.kitchen.detail.view",           "View kitchen detail"],
+      ["admin.kitchen.submit",                "Submit kitchen"],
+      ["admin.kitchen.request.list.view",     "List kitchen requests"],
+      ["admin.kitchen.dish.list.view",        "List kitchen dishes"],
+      ["admin.kitchen.address.add",           "Add kitchen address"],
+      ["admin.kitchen.address.edit",          "Edit kitchen address"],
+      ["admin.kitchen.address.list.view",     "List kitchen addresses"],
+      ["admin.kitchen.availability.add",      "Add kitchen availability"],
+      ["admin.kitchen.availability.view",     "View kitchen availability"],
+      ["admin.kitchen.media.upload",          "Upload kitchen media"],
+      ["admin.kitchen.media.edit",            "Edit kitchen media"],
+      ["admin.kitchen.media.publish",         "Publish kitchen media"],
+      ["admin.kitchen.media.delete",          "Delete kitchen media"],
+      ["admin.kitchen.media.list.view",       "List kitchen media"],
+      ["admin.kitchen.chefStory.create",      "Create chef story"],
+      ["admin.kitchen.chefStory.edit",        "Edit chef story"],
+      ["admin.kitchen.chefStory.list.view",   "List chef stories"],
+      ["admin.kitchen.userDoc.create",        "Create kitchen user doc"],
+      ["admin.kitchen.userDoc.list.view",     "List kitchen user docs"],
+      ["admin.kitchen.chef.invite",           "Invite chef to kitchen"],
+      ["admin.kitchen.user.invite",           "Invite user to kitchen"],
+      ["admin.kitchen.invitation.resend",     "Resend kitchen invitation"],
+      ["admin.kitchen.invitation.revoke",     "Revoke kitchen invitation"],
+      ["admin.kitchen.invitation.accept",     "Accept kitchen invitation"],
+      ["admin.kitchen.invitation.reject",     "Reject kitchen invitation"],
+      ["admin.kitchen.invitation.list.view",  "List kitchen invitations"],
+      ["admin.kitchen.partner.list.view",     "List kitchen partners"],
+      ["admin.kitchen.onboarding.submit",     "Submit kitchen onboarding"],
+      ["admin.kitchen.menu.create",           "Create kitchen menu"],
+      ["admin.kitchen.menu.edit",             "Edit kitchen menu"],
+      ["admin.kitchen.menu.delete",           "Delete kitchen menu"],
+      ["admin.kitchen.menu.list.view",        "List kitchen menus"],
+      ["admin.kitchen.menu.detail.view",      "View kitchen menu detail"],
+      // DISH
+      ["admin.dish.create",                       "Create dish"],
+      ["admin.dish.edit",                         "Edit dish"],
+      ["admin.dish.list.view",                    "List dishes"],
+      ["admin.dish.detail.view",                  "View dish detail"],
+      ["admin.dish.submit",                       "Submit dish"],
+      ["admin.dish.media.upload",                 "Upload dish media"],
+      ["admin.dish.media.edit",                   "Edit dish media"],
+      ["admin.dish.media.publish",                "Publish dish media"],
+      ["admin.dish.media.delete",                 "Delete dish media"],
+      ["admin.dish.media.list.view",              "List dish media"],
+      ["admin.dish.variant.create",               "Create dish variant"],
+      ["admin.dish.variant.edit",                 "Edit dish variant"],
+      ["admin.dish.variant.list.view",            "List dish variants"],
+      ["admin.dish.variant.detail.view",          "View dish variant detail"],
+      ["admin.dish.variant.item.create",          "Create variant item"],
+      ["admin.dish.variant.item.edit",            "Edit variant item"],
+      ["admin.dish.variant.item.list.view",       "List variant items"],
+      ["admin.dish.variant.item.detail.view",     "View variant item detail"],
+      ["admin.dish.variant.item.delete",          "Delete variant item"],
+      ["admin.dish.availability.add",             "Add dish availability"],
+      ["admin.dish.availability.view",            "View dish availability"],
+      ["admin.dish.specialEvent.create",          "Create dish special event"],
+      ["admin.dish.specialEvent.edit",            "Edit dish special event"],
+      ["admin.dish.specialEvent.list.view",       "List dish special events"],
+      ["admin.dish.specialEvent.detail.view",     "View dish special event detail"],
+      ["admin.dish.addOn.create",                 "Create dish add-on"],
+      ["admin.dish.addOn.edit",                   "Edit dish add-on"],
+      ["admin.dish.addOn.list.view",              "List dish add-ons"],
+      ["admin.dish.modifier.create",              "Create dish modifier"],
+      ["admin.dish.modifier.edit",                "Edit dish modifier"],
+      ["admin.dish.modifier.list.view",           "List dish modifiers"],
+      ["admin.dish.modifier.detail.view",         "View dish modifier detail"],
+      ["admin.dish.recommended.create",           "Create recommended dish"],
+      ["admin.dish.recommended.edit",             "Edit recommended dish"],
+      ["admin.dish.recommended.list.view",        "List recommended dishes"],
+      ["admin.dish.recommended.detail.view",      "View recommended dish detail"],
+      // FEEDBACK
+      ["admin.feedback.list.view",            "List feedback"],
+      ["admin.feedback.detail.view",          "View feedback detail"],
+      ["admin.feedback.reject",               "Reject feedback"],
+      ["admin.feedback.send.to.kitchen",      "Send feedback to kitchen"],
+      ["admin.feedback.edit",                 "Edit feedback"],
+      ["admin.feedback.media.delete",         "Delete feedback media"],
+      // PARTNER
+      ["admin.partner.create",                "Create partner"],
+      ["admin.partner.edit",                  "Edit partner"],
+      ["admin.partner.delete",                "Delete partner"],
+      ["admin.partner.list.view",             "List partners"],
+      ["admin.partner.detail.view",           "View partner detail"],
+      // REQUEST
+      ["admin.request.list.view",             "List requests"],
+      ["admin.request.detail.view",           "View request detail"],
+      ["admin.request.approve",               "Approve request"],
+      ["admin.request.reject",                "Reject request"],
+    ];
+
+    for (const [key, description] of adminRbacPermissions) {
+      await pool.query(
+        `INSERT INTO admin_permissions (key, label_key, name, description)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (key) DO UPDATE SET
+           label_key = EXCLUDED.label_key,
+           name = EXCLUDED.name,
+           description = EXCLUDED.description,
+           updated_at = NOW()`,
+        [key, `perm.${key}`, key, description],
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO admin_role_permissions (role_id, permission_id)
+       SELECT ar.id, p.id
+       FROM admin_roles ar
+       CROSS JOIN admin_permissions p
+       WHERE ar.name = 'super_admin'
+         AND p.key = ANY($1::text[])
+       ON CONFLICT (role_id, permission_id) DO NOTHING`,
+      [adminRbacPermissions.map(([key]) => key)],
+    );
+    logger.info(
+      { count: adminRbacPermissions.length },
+      "Admin RBAC permissions seeded and granted to super_admin",
+    );
+
+    // ── 10.3 Corporate company user permissions ───────────────────
     const corporatePermissionKeys = [
       "corporate.company.list.view",
       "corporate.company.detail.view",
@@ -1058,6 +1201,8 @@ async function seed() {
     console.log("  admin_users:              3 entries");
     console.log("  admin_roles:              3 entries");
     console.log("  admin_user_roles:         3 entries");
+    console.log("  admin_permissions:        103 rbac + 1 rider + 23 chat.*");
+    console.log("  admin_role_permissions:   all granted to super_admin");
     console.log("  company_user_permissions: 12 corporate.* keys");
     console.log("  company_roles:            1 corporate_admin role");
     console.log("  companies:                1 Postman test company");
