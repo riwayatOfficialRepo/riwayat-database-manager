@@ -16,6 +16,11 @@ exports.up = (pgm) => {
   `);
 
   pgm.sql(`
+    DELETE FROM company_user
+    WHERE company_code IS NULL;
+  `);
+
+  pgm.sql(`
     ALTER TABLE company_user
       ALTER COLUMN company_code SET NOT NULL;
   `);
