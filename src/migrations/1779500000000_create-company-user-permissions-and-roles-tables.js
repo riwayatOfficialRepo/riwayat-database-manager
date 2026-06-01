@@ -63,6 +63,8 @@ exports.up = (pgm) => {
       ON company_user_roles (company_user_id, role_id)
   `);
 
+  pgm.sql(`ALTER TABLE company_user_roles ADD COLUMN IF NOT EXISTS deleted_at timestamp`);
+
   pgm.createIndex('company_user_roles', 'deleted_at', {
     name: 'idx_company_user_roles_deleted_at',
     ifNotExists: true,
