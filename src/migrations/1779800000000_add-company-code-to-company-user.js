@@ -16,6 +16,13 @@ exports.up = (pgm) => {
   `);
 
   pgm.sql(`
+    DELETE FROM company_user_roles
+    WHERE company_user_id IN (
+      SELECT id FROM company_user WHERE company_code IS NULL
+    );
+  `);
+
+  pgm.sql(`
     DELETE FROM company_user
     WHERE company_code IS NULL;
   `);
