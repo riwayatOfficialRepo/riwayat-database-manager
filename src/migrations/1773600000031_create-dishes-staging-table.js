@@ -87,7 +87,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dishes_staging
         ADD CONSTRAINT unique_staging_dish_name_per_kitchen UNIQUE (kitchen_staging_id, name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -98,7 +98,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT dishes_staging_dish_id_fkey
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -109,7 +109,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT dishes_staging_kitchen_staging_id_fkey
         FOREIGN KEY (kitchen_staging_id) REFERENCES kitchens_staging(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -134,7 +134,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT dishes_staging_course_type_id_fkey
         FOREIGN KEY (course_type_id) REFERENCES dish_course_types(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -144,7 +144,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes_staging
         ADD CONSTRAINT dishes_staging_preparation_mode_check
         CHECK (preparation_mode IN ('ready', 'pre_order'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -153,7 +153,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes_staging
         ADD CONSTRAINT dishes_staging_approx_preparation_time_check
         CHECK (approx_preparation_time >= 0);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -162,7 +162,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes_staging
         ADD CONSTRAINT dishes_staging_preparation_time_unit_check
         CHECK (preparation_time_unit IN ('minutes', 'hours'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

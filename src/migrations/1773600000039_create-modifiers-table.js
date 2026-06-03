@@ -43,7 +43,7 @@ exports.up = (pgm) => {
       ALTER TABLE modifiers ADD CONSTRAINT fk_modifiers_dish
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -74,7 +74,7 @@ exports.up = (pgm) => {
       ALTER TABLE modifiers_staging ADD CONSTRAINT fk_modifiers_staging_dish
         FOREIGN KEY (dish_staging_id) REFERENCES dishes_staging(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -83,7 +83,7 @@ exports.up = (pgm) => {
       ALTER TABLE modifiers_staging ADD CONSTRAINT fk_modifiers_staging_modifier_id
         FOREIGN KEY (modifier_id) REFERENCES modifiers(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

@@ -51,7 +51,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT fk_prospects_kitchen_user
         FOREIGN KEY (kitchen_user_id) REFERENCES kitchen_users(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -60,7 +60,7 @@ exports.up = (pgm) => {
       ALTER TABLE prospects
         ADD CONSTRAINT prospects_status_check
         CHECK (status IN ('INITIATED', 'SUBMITTED'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

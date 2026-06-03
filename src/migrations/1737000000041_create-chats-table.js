@@ -15,7 +15,7 @@ exports.up = (pgm) => {
         'ADMIN_RIDER',
         'ADMIN_ADMIN'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -27,7 +27,7 @@ exports.up = (pgm) => {
         'RIDER',
         'ADMIN'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -43,7 +43,7 @@ exports.up = (pgm) => {
         'SUPPORT_TICKET',
         'GENERAL_INQUIRY'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -54,7 +54,7 @@ exports.up = (pgm) => {
         'CLOSED',
         'ARCHIVED'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -67,7 +67,7 @@ exports.up = (pgm) => {
         'SYSTEM',
         'INTERNAL'
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

@@ -57,7 +57,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE promotions_staging
         ADD CONSTRAINT promotions_staging_name_internal_key UNIQUE (name_internal);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -74,7 +74,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotions_staging_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

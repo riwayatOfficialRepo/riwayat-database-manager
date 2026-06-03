@@ -33,7 +33,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dish_course_types
         ADD CONSTRAINT dish_course_types_name_key UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

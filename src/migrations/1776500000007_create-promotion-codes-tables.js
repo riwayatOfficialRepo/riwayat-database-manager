@@ -54,7 +54,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_codes_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -63,7 +63,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE promotion_codes
         ADD CONSTRAINT promotion_codes_promotion_id_code_key UNIQUE (promotion_id, code);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -106,7 +106,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_codes_staging_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -117,7 +117,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_codes_staging_promotion_code_id_fkey
         FOREIGN KEY (promotion_code_id) REFERENCES promotion_codes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

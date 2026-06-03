@@ -56,7 +56,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE promotions
         ADD CONSTRAINT promotions_name_internal_key UNIQUE (name_internal);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

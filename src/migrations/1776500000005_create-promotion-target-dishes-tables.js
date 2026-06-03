@@ -51,7 +51,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_target_dishes_promotion_target_kitchen_id_fkey
         FOREIGN KEY (promotion_target_kitchen_id) REFERENCES promotion_target_kitchens(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -90,7 +90,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_target_dishes_staging_kitchen_staging_id_fkey
         FOREIGN KEY (promotion_target_kitchen_staging_id) REFERENCES promotion_target_kitchens_staging(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -101,7 +101,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT fk_promotion_target_dish
         FOREIGN KEY (promotion_target_dish_id) REFERENCES promotion_target_dishes(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

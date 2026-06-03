@@ -32,7 +32,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT audience_rules_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -66,7 +66,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT audience_rules_staging_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -77,7 +77,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT audience_rules_staging_audience_rule_id_fkey
         FOREIGN KEY (audience_rule_id) REFERENCES audience_rules(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

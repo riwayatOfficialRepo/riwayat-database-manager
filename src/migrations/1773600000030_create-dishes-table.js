@@ -84,7 +84,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE dishes
         ADD CONSTRAINT unique_dish_name_per_kitchen UNIQUE (kitchen_id, name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -95,7 +95,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT dishes_kitchen_id_fkey
         FOREIGN KEY (kitchen_id) REFERENCES kitchens(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -120,7 +120,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT dishes_course_type_id_fkey
         FOREIGN KEY (course_type_id) REFERENCES dish_course_types(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -130,7 +130,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes
         ADD CONSTRAINT dishes_preparation_mode_check
         CHECK (preparation_mode IN ('ready', 'pre_order'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -139,7 +139,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes
         ADD CONSTRAINT dishes_approx_preparation_time_check
         CHECK (approx_preparation_time >= 0);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -148,7 +148,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes
         ADD CONSTRAINT dishes_preparation_time_unit_check
         CHECK (preparation_time_unit IN ('minutes', 'hours'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

@@ -19,12 +19,17 @@ exports.up = (pgm) => {
   }, { ifNotExists: true });
 
   pgm.sql(`
+    DELETE FROM dish_media
+    WHERE dish_id NOT IN (SELECT id FROM dishes);
+  `);
+
+  pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE dish_media
         ADD CONSTRAINT fk_dish_media_dish
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

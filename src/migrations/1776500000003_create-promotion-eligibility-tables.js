@@ -89,7 +89,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_eligibility_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -164,7 +164,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_eligibility_staging_fkey
         FOREIGN KEY (promotion_eligibility_id) REFERENCES promotion_eligibility(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

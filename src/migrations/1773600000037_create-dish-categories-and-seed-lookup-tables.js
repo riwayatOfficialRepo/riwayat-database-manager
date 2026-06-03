@@ -10,7 +10,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes ADD CONSTRAINT dishes_dish_category_id_fkey
         FOREIGN KEY (dish_category_id) REFERENCES dish_categories(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -20,7 +20,7 @@ exports.up = (pgm) => {
       ALTER TABLE dishes_staging ADD CONSTRAINT dishes_staging_dish_category_id_fkey
         FOREIGN KEY (dish_category_id) REFERENCES dish_categories(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

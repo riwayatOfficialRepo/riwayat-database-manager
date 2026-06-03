@@ -4,24 +4,24 @@
  */
 
 exports.up = (pgm) => {
-  // Migrate existing data to uppercase before tightening constraints
+  // Drop existing constraints FIRST so the data migration does not violate them.
+  // The original constraints used lowercase values; uppercasing the data while
+  // those constraints are active causes a check-constraint violation.
+  pgm.sql(`ALTER TABLE dishes DROP CONSTRAINT IF EXISTS dishes_preparation_mode_check`);
+  pgm.sql(`ALTER TABLE dishes DROP CONSTRAINT IF EXISTS dishes_preparation_time_unit_check`);
+  pgm.sql(`ALTER TABLE dishes_staging DROP CONSTRAINT IF EXISTS dishes_staging_preparation_mode_check`);
+  pgm.sql(`ALTER TABLE dishes_staging DROP CONSTRAINT IF EXISTS dishes_staging_preparation_time_unit_check`);
+
+  // Migrate existing data to uppercase.
   pgm.sql(`UPDATE dishes SET preparation_mode = UPPER(preparation_mode) WHERE preparation_mode IS NOT NULL`);
   pgm.sql(`UPDATE dishes SET preparation_time_unit = UPPER(preparation_time_unit) WHERE preparation_time_unit IS NOT NULL`);
   pgm.sql(`UPDATE dishes_staging SET preparation_mode = UPPER(preparation_mode) WHERE preparation_mode IS NOT NULL`);
   pgm.sql(`UPDATE dishes_staging SET preparation_time_unit = UPPER(preparation_time_unit) WHERE preparation_time_unit IS NOT NULL`);
 
-  // dishes table
-  pgm.sql(`ALTER TABLE dishes DROP CONSTRAINT IF EXISTS dishes_preparation_mode_check`);
+  // Re-add constraints with uppercase allowed values.
   pgm.sql(`ALTER TABLE dishes ADD CONSTRAINT dishes_preparation_mode_check CHECK (preparation_mode IN ('READY', 'PRE_ORDER'))`);
-
-  pgm.sql(`ALTER TABLE dishes DROP CONSTRAINT IF EXISTS dishes_preparation_time_unit_check`);
   pgm.sql(`ALTER TABLE dishes ADD CONSTRAINT dishes_preparation_time_unit_check CHECK (preparation_time_unit IN ('MINUTES', 'HOURS'))`);
-
-  // dishes_staging table
-  pgm.sql(`ALTER TABLE dishes_staging DROP CONSTRAINT IF EXISTS dishes_staging_preparation_mode_check`);
   pgm.sql(`ALTER TABLE dishes_staging ADD CONSTRAINT dishes_staging_preparation_mode_check CHECK (preparation_mode IN ('READY', 'PRE_ORDER'))`);
-
-  pgm.sql(`ALTER TABLE dishes_staging DROP CONSTRAINT IF EXISTS dishes_staging_preparation_time_unit_check`);
   pgm.sql(`ALTER TABLE dishes_staging ADD CONSTRAINT dishes_staging_preparation_time_unit_check CHECK (preparation_time_unit IN ('MINUTES', 'HOURS'))`);
 };
 

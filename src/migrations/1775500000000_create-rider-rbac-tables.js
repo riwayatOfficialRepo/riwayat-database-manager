@@ -20,7 +20,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE rider_roles ADD CONSTRAINT rider_roles_name_key UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -42,7 +42,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE rider_permissions ADD CONSTRAINT rider_permissions_key_key UNIQUE (key);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -63,7 +63,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_user_roles
         ADD CONSTRAINT rider_user_roles_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -72,7 +72,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_user_roles
         ADD CONSTRAINT rider_user_roles_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES rider_roles(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -80,7 +80,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE rider_user_roles
         ADD CONSTRAINT rider_user_roles_rider_id_role_id_key UNIQUE (rider_id, role_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -99,7 +99,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_role_permissions
         ADD CONSTRAINT rider_role_permissions_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES rider_roles(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -108,7 +108,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_role_permissions
         ADD CONSTRAINT rider_role_permissions_permission_id_fkey
         FOREIGN KEY (permission_id) REFERENCES rider_permissions(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -116,7 +116,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE rider_role_permissions
         ADD CONSTRAINT rider_role_permissions_role_id_permission_id_key UNIQUE (role_id, permission_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

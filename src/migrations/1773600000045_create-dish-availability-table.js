@@ -21,7 +21,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_availability ADD CONSTRAINT dish_availability_dish_id_fkey
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -30,7 +30,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_availability ADD CONSTRAINT dish_availability_kitchen_availability_id_fkey
         FOREIGN KEY (kitchen_availability_id) REFERENCES kitchen_availability(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -53,7 +53,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_availability_staging ADD CONSTRAINT dish_availability_staging_dish_availability_id_fkey
         FOREIGN KEY (dish_availability_id) REFERENCES dish_availability(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -62,7 +62,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_availability_staging ADD CONSTRAINT dish_availability_staging_kitchen_availability_id_fkey
         FOREIGN KEY (kitchen_availability_id) REFERENCES kitchen_availability(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

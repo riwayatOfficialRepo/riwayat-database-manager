@@ -7,7 +7,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE days_of_week ADD CONSTRAINT days_of_week_name_key UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

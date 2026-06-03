@@ -94,7 +94,7 @@ exports.up = (pgm) => {
       ALTER TABLE delivery_company_users
         ADD CONSTRAINT delivery_company_users_company_fkey
         FOREIGN KEY (delivery_company_id) REFERENCES delivery_company(delivery_company_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -149,7 +149,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE riders ADD CONSTRAINT riders_status_check
         CHECK (status IN ('pending', 'active', 'suspended', 'rejected', 'disabled'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -158,7 +158,7 @@ exports.up = (pgm) => {
       ALTER TABLE riders
         ADD CONSTRAINT riders_delivery_company_fkey
         FOREIGN KEY (delivery_company_id) REFERENCES delivery_company(delivery_company_id) ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -212,7 +212,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_auth
         ADD CONSTRAINT rider_auth_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -258,7 +258,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_presence
         ADD CONSTRAINT rider_presence_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -297,7 +297,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_media
         ADD CONSTRAINT rider_media_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -344,7 +344,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_vehicle
         ADD CONSTRAINT rider_vehicle_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -389,7 +389,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_documents
         ADD CONSTRAINT rider_documents_rider_fkey
         FOREIGN KEY (rider_id) REFERENCES riders(rider_id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -398,7 +398,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_documents
         ADD CONSTRAINT rider_documents_media_fkey
         FOREIGN KEY (rider_media_id) REFERENCES rider_media(media_id) ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

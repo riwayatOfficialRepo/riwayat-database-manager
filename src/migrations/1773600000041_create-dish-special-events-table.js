@@ -25,12 +25,18 @@ exports.up = (pgm) => {
       ON dish_special_events (dish_id);
   `);
 
+  // Remove orphaned rows that would block the FK constraint validation.
+  pgm.sql(`
+    DELETE FROM dish_special_events
+    WHERE dish_id NOT IN (SELECT id FROM dishes);
+  `);
+
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE dish_special_events ADD CONSTRAINT dish_special_events_dish_id_fkey
         FOREIGN KEY (dish_id) REFERENCES dishes(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -57,7 +63,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_special_events_staging ADD CONSTRAINT dish_special_event_staging_fkey
         FOREIGN KEY (dish_special_event_id) REFERENCES dish_special_events(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

@@ -6,6 +6,7 @@
  * - Admin users and roles
  * - Customers, customer app permissions (RBAC), customer favorites, and customer addresses
  * - Chat permissions (admin / kitchen / customer) and grants to seeded user roles
+ * - Corporate portal permissions (company_user_permissions)
  *
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
@@ -288,7 +289,7 @@ async function seed() {
     // ── 8. Admin Users ─────────────────────────────────────────────
     // password_hash is bcrypt of 'admin123' - CHANGE IN PRODUCTION
     const adminPasswordHash =
-      "$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36zQvzsMv1Ri0Pg/DmhXrMC";
+      "$2b$10$0R6Ziza0fFd7pmtV08F7XuhT8WwO8hoXMEPDKe2t3Y6/rAM6mzk/m";
 
     const adminUsersResult = await pool.query(`
       INSERT INTO admin_users (name, email, phone, password_hash, is_active)
@@ -381,6 +382,364 @@ async function seed() {
       ON CONFLICT (role_id, permission_id) DO NOTHING;
     `);
     logger.info("Admin rider list permission seeded and granted to role_id=1");
+
+    // ── 10.2 Admin RBAC Permissions (super_admin gets all) ────────
+    const adminRbacPermissions = [
+      // USER
+      ["admin.user.create", "Create admin user"],
+      ["admin.user.list.view", "List admin users"],
+      ["admin.user.delete", "Delete admin user"],
+      ["admin.user.edit", "Edit admin user"],
+      ["admin.user.activate", "Activate admin user"],
+      ["admin.user.deactivate", "Deactivate admin user"],
+      ["admin.user.reset.pin", "Reset admin user PIN"],
+      // ROLE
+      ["admin.role.create", "Create admin role"],
+      ["admin.role.edit", "Edit admin role"],
+      ["admin.role.delete", "Delete admin role"],
+      ["admin.role.list.view", "List admin roles"],
+      // PERMISSION
+      ["admin.permission.create", "Create admin permission"],
+      ["admin.permission.edit", "Edit admin permission"],
+      ["admin.permission.delete", "Delete admin permission"],
+      ["admin.permission.list.view", "List admin permissions"],
+      // KITCHEN
+      ["admin.kitchen.create", "Create kitchen"],
+      ["admin.kitchen.edit", "Edit kitchen"],
+      ["admin.kitchen.delete", "Delete kitchen"],
+      ["admin.kitchen.list.view", "List kitchens"],
+      ["admin.kitchen.detail.view", "View kitchen detail"],
+      ["admin.kitchen.submit", "Submit kitchen"],
+      ["admin.kitchen.request.list.view", "List kitchen requests"],
+      ["admin.kitchen.dish.list.view", "List kitchen dishes"],
+      ["admin.kitchen.address.add", "Add kitchen address"],
+      ["admin.kitchen.address.edit", "Edit kitchen address"],
+      ["admin.kitchen.address.list.view", "List kitchen addresses"],
+      ["admin.kitchen.availability.add", "Add kitchen availability"],
+      ["admin.kitchen.availability.view", "View kitchen availability"],
+      ["admin.kitchen.media.upload", "Upload kitchen media"],
+      ["admin.kitchen.media.edit", "Edit kitchen media"],
+      ["admin.kitchen.media.publish", "Publish kitchen media"],
+      ["admin.kitchen.media.delete", "Delete kitchen media"],
+      ["admin.kitchen.media.list.view", "List kitchen media"],
+      ["admin.kitchen.chefStory.create", "Create chef story"],
+      ["admin.kitchen.chefStory.edit", "Edit chef story"],
+      ["admin.kitchen.chefStory.list.view", "List chef stories"],
+      ["admin.kitchen.userDoc.create", "Create kitchen user doc"],
+      ["admin.kitchen.userDoc.list.view", "List kitchen user docs"],
+      ["admin.kitchen.chef.invite", "Invite chef to kitchen"],
+      ["admin.kitchen.user.invite", "Invite user to kitchen"],
+      ["admin.kitchen.invitation.resend", "Resend kitchen invitation"],
+      ["admin.kitchen.invitation.revoke", "Revoke kitchen invitation"],
+      ["admin.kitchen.invitation.accept", "Accept kitchen invitation"],
+      ["admin.kitchen.invitation.reject", "Reject kitchen invitation"],
+      ["admin.kitchen.invitation.list.view", "List kitchen invitations"],
+      ["admin.kitchen.partner.list.view", "List kitchen partners"],
+      ["admin.kitchen.onboarding.submit", "Submit kitchen onboarding"],
+      ["admin.kitchen.menu.create", "Create kitchen menu"],
+      ["admin.kitchen.menu.edit", "Edit kitchen menu"],
+      ["admin.kitchen.menu.delete", "Delete kitchen menu"],
+      ["admin.kitchen.menu.list.view", "List kitchen menus"],
+      ["admin.kitchen.menu.detail.view", "View kitchen menu detail"],
+      // DISH
+      ["admin.dish.create", "Create dish"],
+      ["admin.dish.edit", "Edit dish"],
+      ["admin.dish.list.view", "List dishes"],
+      ["admin.dish.detail.view", "View dish detail"],
+      ["admin.dish.submit", "Submit dish"],
+      ["admin.dish.media.upload", "Upload dish media"],
+      ["admin.dish.media.edit", "Edit dish media"],
+      ["admin.dish.media.publish", "Publish dish media"],
+      ["admin.dish.media.delete", "Delete dish media"],
+      ["admin.dish.media.list.view", "List dish media"],
+      ["admin.dish.variant.create", "Create dish variant"],
+      ["admin.dish.variant.edit", "Edit dish variant"],
+      ["admin.dish.variant.list.view", "List dish variants"],
+      ["admin.dish.variant.detail.view", "View dish variant detail"],
+      ["admin.dish.variant.item.create", "Create variant item"],
+      ["admin.dish.variant.item.edit", "Edit variant item"],
+      ["admin.dish.variant.item.list.view", "List variant items"],
+      ["admin.dish.variant.item.detail.view", "View variant item detail"],
+      ["admin.dish.variant.item.delete", "Delete variant item"],
+      ["admin.dish.availability.add", "Add dish availability"],
+      ["admin.dish.availability.view", "View dish availability"],
+      ["admin.dish.specialEvent.create", "Create dish special event"],
+      ["admin.dish.specialEvent.edit", "Edit dish special event"],
+      ["admin.dish.specialEvent.list.view", "List dish special events"],
+      ["admin.dish.specialEvent.detail.view", "View dish special event detail"],
+      ["admin.dish.addOn.create", "Create dish add-on"],
+      ["admin.dish.addOn.edit", "Edit dish add-on"],
+      ["admin.dish.addOn.list.view", "List dish add-ons"],
+      ["admin.dish.modifier.create", "Create dish modifier"],
+      ["admin.dish.modifier.edit", "Edit dish modifier"],
+      ["admin.dish.modifier.list.view", "List dish modifiers"],
+      ["admin.dish.modifier.detail.view", "View dish modifier detail"],
+      ["admin.dish.recommended.create", "Create recommended dish"],
+      ["admin.dish.recommended.edit", "Edit recommended dish"],
+      ["admin.dish.recommended.list.view", "List recommended dishes"],
+      ["admin.dish.recommended.detail.view", "View recommended dish detail"],
+      // FEEDBACK
+      ["admin.feedback.list.view", "List feedback"],
+      ["admin.feedback.detail.view", "View feedback detail"],
+      ["admin.feedback.reject", "Reject feedback"],
+      ["admin.feedback.send.to.kitchen", "Send feedback to kitchen"],
+      ["admin.feedback.edit", "Edit feedback"],
+      ["admin.feedback.media.delete", "Delete feedback media"],
+      // PARTNER
+      ["admin.partner.create", "Create partner"],
+      ["admin.partner.edit", "Edit partner"],
+      ["admin.partner.delete", "Delete partner"],
+      ["admin.partner.list.view", "List partners"],
+      ["admin.partner.detail.view", "View partner detail"],
+      // REQUEST
+      ["admin.request.list.view", "List requests"],
+      ["admin.request.detail.view", "View request detail"],
+      ["admin.request.approve", "Approve request"],
+      ["admin.request.reject", "Reject request"],
+    ];
+
+    for (const [key, description] of adminRbacPermissions) {
+      await pool.query(
+        `INSERT INTO admin_permissions (key, label_key, name, description)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (key) DO UPDATE SET
+           label_key = EXCLUDED.label_key,
+           name = EXCLUDED.name,
+           description = EXCLUDED.description,
+           updated_at = NOW()`,
+        [key, `perm.${key}`, key, description],
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO admin_role_permissions (role_id, permission_id)
+       SELECT ar.id, p.id
+       FROM admin_roles ar
+       CROSS JOIN admin_permissions p
+       WHERE ar.name = 'super_admin'
+         AND p.key = ANY($1::text[])
+       ON CONFLICT (role_id, permission_id) DO NOTHING`,
+      [adminRbacPermissions.map(([key]) => key)],
+    );
+    logger.info(
+      { count: adminRbacPermissions.length },
+      "Admin RBAC permissions seeded and granted to super_admin",
+    );
+
+    // ── 10.3 Corporate company user permissions ───────────────────
+    const corporatePermissionKeys = [
+      "corporate.company.list.view",
+      "corporate.company.detail.view",
+      "corporate.company_user.list.view",
+      "corporate.company_user.detail.view",
+      "corporate.company_user.activate",
+      "corporate.company_user.deactivate",
+      "corporate.company_user.edit",
+      "corporate.employee.activate",
+      "corporate.employee.deactivate",
+      "corporate.employee.list.view",
+      "corporate.employee.detail.view",
+      "corporate.employee.edit",
+    ];
+
+    await pool.query(
+      `
+      DELETE FROM admin_role_permissions arp
+      USING admin_permissions p
+      WHERE arp.permission_id = p.id
+        AND p.key = ANY($1::text[])
+    `,
+      [corporatePermissionKeys],
+    );
+
+    await pool.query(
+      `
+      DELETE FROM admin_permissions
+      WHERE key = ANY($1::text[])
+    `,
+      [corporatePermissionKeys],
+    );
+
+    await pool.query(`
+      INSERT INTO company_user_permissions (key, label_key, name, description) VALUES
+        ('corporate.company.list.view', 'perm.corporate.company.list.view', 'List companies', 'Corporate portal: list companies'),
+        ('corporate.company.detail.view', 'perm.corporate.company.detail.view', 'View company', 'Corporate portal: view company by id'),
+        ('corporate.company_user.list.view', 'perm.corporate.company_user.list.view', 'List company users', 'Corporate portal: list company users'),
+        ('corporate.company_user.detail.view', 'perm.corporate.company_user.detail.view', 'View company user', 'Corporate portal: view company user by id'),
+        ('corporate.company_user.activate', 'perm.corporate.company_user.activate', 'Activate company user', 'Corporate portal: activate company user'),
+        ('corporate.company_user.deactivate', 'perm.corporate.company_user.deactivate', 'Deactivate company user', 'Corporate portal: deactivate company user'),
+        ('corporate.company_user.edit', 'perm.corporate.company_user.edit', 'Edit company user', 'Corporate portal: edit company user'),
+        ('corporate.employee.activate', 'perm.corporate.employee.activate', 'Activate employee', 'Corporate portal: activate employee'),
+        ('corporate.employee.deactivate', 'perm.corporate.employee.deactivate', 'Deactivate employee', 'Corporate portal: deactivate employee'),
+        ('corporate.employee.list.view', 'perm.corporate.employee.list.view', 'List employees', 'Corporate portal: list employees'),
+        ('corporate.employee.detail.view', 'perm.corporate.employee.detail.view', 'View employee', 'Corporate portal: view employee by id'),
+        ('corporate.employee.edit', 'perm.corporate.employee.edit', 'Edit employee', 'Corporate portal: edit employee')
+      ON CONFLICT (key) DO UPDATE SET
+        label_key = EXCLUDED.label_key,
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        updated_at = NOW();
+    `);
+    logger.info(
+      { count: corporatePermissionKeys.length },
+      "Corporate company user permissions seeded into company_user_permissions",
+    );
+
+    await pool.query(`
+      INSERT INTO company_roles (name, label_key, description, status)
+      VALUES ('corporate_admin', 'role.corporate_admin', 'Full corporate portal access for local testing', 'ACTIVE')
+      ON CONFLICT (name) DO UPDATE SET
+        label_key = EXCLUDED.label_key,
+        description = EXCLUDED.description,
+        status = EXCLUDED.status,
+        updated_at = NOW(),
+        deleted_at = NULL;
+    `);
+
+    const corporateRoleResult = await pool.query(
+      `SELECT id FROM company_roles WHERE name = 'corporate_admin' AND status = 'ACTIVE' LIMIT 1`,
+    );
+    const corporateRoleId = corporateRoleResult.rows[0]?.id;
+
+    await pool.query(
+      `
+      INSERT INTO company_role_permissions (role_id, permission_id)
+      SELECT $1, p.id
+      FROM company_user_permissions p
+      WHERE p.key = ANY($2::text[])
+      ON CONFLICT (role_id, permission_id) DO NOTHING;
+    `,
+      [corporateRoleId, corporatePermissionKeys],
+    );
+
+    const corporateTestCompanyId = "33333333-3333-4333-8333-333333333333";
+    const corporateTestCompanyResult = await pool.query(
+      `
+      INSERT INTO companies (
+        id,
+        company_code,
+        name,
+        primary_email,
+        primary_phone,
+        primary_contact_name,
+        website,
+        tax_id,
+        status,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        'POSTMAN-CORP',
+        'Postman Test Company',
+        'corporate.admin@riwayat.com',
+        '+923001234567',
+        'Postman Corporate Admin',
+        'https://riwayat.com',
+        'TAX-POSTMAN-CORP',
+        'active',
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (company_code) DO UPDATE SET
+        id = EXCLUDED.id,
+        name = EXCLUDED.name,
+        primary_email = EXCLUDED.primary_email,
+        primary_phone = EXCLUDED.primary_phone,
+        primary_contact_name = EXCLUDED.primary_contact_name,
+        website = EXCLUDED.website,
+        tax_id = EXCLUDED.tax_id,
+        status = 'active',
+        updated_at = NOW()
+      RETURNING id, company_code, name;
+    `,
+      [corporateTestCompanyId],
+    );
+    const corporateTestCompany = corporateTestCompanyResult.rows[0];
+
+    const corporateTestUserId = "22222222-2222-4222-8222-222222222222";
+    await pool.query(
+      `
+      DELETE FROM company_user
+      WHERE email = 'corporate.admin@riwayat.com'
+        AND id <> $1
+    `,
+      [corporateTestUserId],
+    );
+
+    const corporateTestUserResult = await pool.query(
+      `
+      INSERT INTO company_user (
+        id,
+        name,
+        email,
+        company_code,
+        phone,
+        password_hash,
+        is_active,
+        status,
+        user_entity_type,
+        business_reference,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        'Postman Corporate Admin',
+        'corporate.admin@riwayat.com',
+        $3,
+        '+923001234567',
+        $2,
+        true,
+        'ACTIVE',
+        'TEAM',
+        $4,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (email) DO UPDATE SET
+        name = EXCLUDED.name,
+        company_code = EXCLUDED.company_code,
+        phone = EXCLUDED.phone,
+        password_hash = EXCLUDED.password_hash,
+        is_active = true,
+        status = 'ACTIVE',
+        user_entity_type = EXCLUDED.user_entity_type,
+        business_reference = EXCLUDED.business_reference,
+        updated_at = NOW(),
+        deleted_at = NULL
+      RETURNING id, name, email, phone;
+    `,
+      [
+        corporateTestUserId,
+        adminPasswordHash,
+        corporateTestCompany.company_code,
+        corporateTestCompany.id,
+      ],
+    );
+    const corporateTestUser = corporateTestUserResult.rows[0];
+
+    await pool.query(
+      `
+      INSERT INTO company_user_roles (company_user_id, role_id, status)
+      VALUES ($1, $2, 'ACTIVE')
+      ON CONFLICT (company_user_id, role_id) DO UPDATE SET
+        status = 'ACTIVE',
+        updated_at = NOW(),
+        deleted_at = NULL;
+    `,
+      [corporateTestUser.id, corporateRoleId],
+    );
+    logger.info(
+      {
+        userId: corporateTestUser.id,
+        email: corporateTestUser.email,
+        companyId: corporateTestCompany.id,
+        companyCode: corporateTestCompany.company_code,
+        roleId: corporateRoleId,
+      },
+      "Postman corporate admin user seeded",
+    );
 
     // ── 11. Customers ────────────────────────────────────────────
     const customersData = [
@@ -849,11 +1208,19 @@ async function seed() {
     console.log("  admin_users:              3 entries");
     console.log("  admin_roles:              3 entries");
     console.log("  admin_user_roles:         3 entries");
+    console.log("  admin_permissions:        103 rbac + 1 rider + 23 chat.*");
+    console.log("  admin_role_permissions:   all granted to super_admin");
+    console.log("  company_user_permissions: 12 corporate.* keys");
+    console.log("  company_roles:            1 corporate_admin role");
+    console.log("  companies:                1 Postman test company");
+    console.log("  company_user:             1 Postman test admin");
     console.log("  ──────────────────────────────────────");
     console.log("  customers:               3 entries");
     console.log("  customer_roles:           1 entry");
     console.log("  customer_permissions:    17 customer.* + 23 chat.*");
-    console.log("  customer_role_permissions: customer.* + chat on Customer role");
+    console.log(
+      "  customer_role_permissions: customer.* + chat on Customer role",
+    );
     console.log("  customer_user_roles:      (non-deleted customers)");
     console.log("  chat_permissions:         23 keys × 3 tables (upsert)");
     console.log(

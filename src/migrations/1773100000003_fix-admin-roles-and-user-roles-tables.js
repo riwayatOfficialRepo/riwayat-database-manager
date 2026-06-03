@@ -68,7 +68,7 @@ exports.up = (pgm) => {
       ALTER TABLE admin_user_roles ADD CONSTRAINT admin_user_roles_admin_user_id_fkey
         FOREIGN KEY (admin_user_id) REFERENCES admin_users (id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -81,7 +81,7 @@ exports.up = (pgm) => {
       ALTER TABLE admin_user_roles ADD CONSTRAINT admin_user_roles_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES admin_roles (id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };
@@ -101,7 +101,7 @@ exports.down = (pgm) => {
       ALTER TABLE admin_user_roles ADD CONSTRAINT admin_user_roles_admin_user_id_fkey
         FOREIGN KEY (admin_user_id) REFERENCES admin_users (id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -111,7 +111,7 @@ exports.down = (pgm) => {
       ALTER TABLE admin_user_roles ADD CONSTRAINT admin_user_roles_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES admin_roles (id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

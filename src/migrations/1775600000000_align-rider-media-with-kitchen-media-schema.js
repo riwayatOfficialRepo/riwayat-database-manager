@@ -71,7 +71,7 @@ exports.up = (pgm) => {
       ALTER TABLE rider_documents
         ADD CONSTRAINT rider_documents_media_fkey
         FOREIGN KEY (rider_media_id) REFERENCES rider_media(id) ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };
@@ -143,7 +143,7 @@ exports.down = (pgm) => {
       ALTER TABLE rider_documents
         ADD CONSTRAINT rider_documents_media_fkey
         FOREIGN KEY (rider_media_id) REFERENCES rider_media(media_id) ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

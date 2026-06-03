@@ -21,7 +21,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variant_items ADD CONSTRAINT fk_dish_variant_items_variant
         FOREIGN KEY (variant_id) REFERENCES dish_variants(id)
         ON UPDATE CASCADE ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -45,7 +45,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variant_items_staging ADD CONSTRAINT fk_dish_variant_items_staging_item
         FOREIGN KEY (dish_variant_item_id) REFERENCES dish_variant_items(id)
         ON UPDATE CASCADE ON DELETE SET NULL;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -54,7 +54,7 @@ exports.up = (pgm) => {
       ALTER TABLE dish_variant_items_staging ADD CONSTRAINT fk_dish_variant_items_staging_variant_staging
         FOREIGN KEY (variant_staging_id) REFERENCES dish_variants_staging(id)
         ON UPDATE CASCADE ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };

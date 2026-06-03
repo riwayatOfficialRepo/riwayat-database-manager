@@ -54,7 +54,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_target_kitchens_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -64,7 +64,7 @@ exports.up = (pgm) => {
       ALTER TABLE promotion_target_kitchens
         ADD CONSTRAINT promotion_target_kitchens_target_type_check
         CHECK (target_type IN ('KITCHEN', 'CHEF', 'DISH', 'CATEGORY'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -106,7 +106,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT promotion_target_kitchens_staging_promotion_id_fkey
         FOREIGN KEY (promotion_id) REFERENCES promotions(id)
         ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -117,7 +117,7 @@ exports.up = (pgm) => {
         ADD CONSTRAINT fk_promotion_target_kitchen
         FOREIGN KEY (promotion_target_kitchen_id) REFERENCES promotion_target_kitchens(id)
         ON UPDATE NO ACTION ON DELETE NO ACTION;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -127,7 +127,7 @@ exports.up = (pgm) => {
       ALTER TABLE promotion_target_kitchens_staging
         ADD CONSTRAINT promotion_target_kitchens_staging_target_type_check
         CHECK (target_type IN ('KITCHEN', 'CHEF', 'DISH', 'CATEGORY'));
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 

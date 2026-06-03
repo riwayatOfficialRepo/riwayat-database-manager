@@ -30,7 +30,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE customer_roles ADD CONSTRAINT customer_roles_name_key UNIQUE (name);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -53,7 +53,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     DO $$ BEGIN
       ALTER TABLE customer_permissions ADD CONSTRAINT customer_permissions_key_key UNIQUE (key);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -75,7 +75,7 @@ exports.up = (pgm) => {
       ALTER TABLE customer_user_roles
         ADD CONSTRAINT customer_user_roles_customer_user_id_fkey
         FOREIGN KEY (customer_user_id) REFERENCES customer(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -84,7 +84,7 @@ exports.up = (pgm) => {
       ALTER TABLE customer_user_roles
         ADD CONSTRAINT customer_user_roles_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES customer_roles(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -92,7 +92,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE customer_user_roles
         ADD CONSTRAINT customer_user_roles_user_role_key UNIQUE (customer_user_id, role_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -112,7 +112,7 @@ exports.up = (pgm) => {
       ALTER TABLE customer_role_permissions
         ADD CONSTRAINT customer_role_permissions_role_id_fkey
         FOREIGN KEY (role_id) REFERENCES customer_roles(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -121,7 +121,7 @@ exports.up = (pgm) => {
       ALTER TABLE customer_role_permissions
         ADD CONSTRAINT customer_role_permissions_permission_id_fkey
         FOREIGN KEY (permission_id) REFERENCES customer_permissions(id) ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 
@@ -129,7 +129,7 @@ exports.up = (pgm) => {
     DO $$ BEGIN
       ALTER TABLE customer_role_permissions
         ADD CONSTRAINT customer_role_permissions_role_id_permission_id_key UNIQUE (role_id, permission_id);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
     END $$;
   `);
 };
