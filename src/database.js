@@ -194,7 +194,7 @@ const healthCheck = async () => {
       error: error.message,
       timestamp: new Date().toISOString(),
     };
-  }
+  } 
 };
 
 const executeQuery = async (sql, params = [], client = null) => {

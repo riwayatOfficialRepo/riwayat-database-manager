@@ -5,7 +5,7 @@
  * - Kitchens and related mapping tables
  * - Admin users and roles
  * - Customers, customer app permissions (RBAC), customer favorites, and customer addresses
- * - Chat permissions (admin / kitchen / customer) and grants to role_id = 1
+ * - Chat permissions (admin / kitchen / customer) and grants to seeded user roles
  *
  * Skips: kitchen_addresses, kitchen_availability, kitchen_media tables.
  *
@@ -524,7 +524,7 @@ async function seed() {
       "Customer app permissions seeded, granted to Customer role, user roles backfilled",
     );
 
-    // ── 11.2 Chat permissions (upsert + grant role_id = 1) ───────
+    // ── 11.2 Chat permissions (upsert + grant to seeded user roles) ─
     const chatPermissions = [
       ["chat.initiate", "Allow initiating chat"],
       ["chat.inbox", "Allow viewing chat inbox"],
@@ -538,6 +538,7 @@ async function seed() {
         "Allow viewing kitchen chats (admin/team)",
       ],
       ["chat.admin.team.chats.view", "Allow viewing team chats (admin/team)"],
+      ["chat.admin.join", "Allow admin to join any chat as a participant"],
       ["chat.inbox.kitchen", "Allow viewing my kitchen chats"],
       ["chat.details.get", "Allow viewing chat details"],
       ["chat.close", "Allow closing a chat"],
@@ -591,27 +592,33 @@ async function seed() {
 
     await pool.query(`
       INSERT INTO admin_role_permissions (role_id, permission_id)
-      SELECT 1, p.id
-      FROM admin_permissions p
-      WHERE p.key LIKE 'chat.%'
+      SELECT r.id, p.id
+      FROM admin_roles r
+      CROSS JOIN admin_permissions p
+      WHERE r.name IN ('super_admin', 'superadmin', 'operations_manager', 'support_agent')
+        AND p.key LIKE 'chat.%'
       ON CONFLICT (role_id, permission_id) DO NOTHING
     `);
     await pool.query(`
       INSERT INTO kitchen_role_permissions (role_id, permission_id)
-      SELECT 1, p.id
-      FROM kitchen_permissions p
-      WHERE p.key LIKE 'chat.%'
+      SELECT r.id, p.id
+      FROM kitchen_roles r
+      CROSS JOIN kitchen_permissions p
+      WHERE r.name = 'owner' AND r.status = 'ACTIVE'
+        AND p.key LIKE 'chat.%'
       ON CONFLICT (role_id, permission_id) DO NOTHING
     `);
     await pool.query(`
       INSERT INTO customer_role_permissions (role_id, permission_id)
-      SELECT 1, p.id
-      FROM customer_permissions p
-      WHERE p.key LIKE 'chat.%'
+      SELECT r.id, p.id
+      FROM customer_roles r
+      CROSS JOIN customer_permissions p
+      WHERE r.name = 'Customer' AND r.status = 'ACTIVE'
+        AND p.key LIKE 'chat.%'
       ON CONFLICT (role_id, permission_id) DO NOTHING
     `);
     logger.info(
-      "Chat permissions granted to role_id=1 (admin, kitchen, customer)",
+      "Chat permissions granted to seeded user roles (admin/kitchen/customer)",
     );
 
     // ── 12. Customer Favorites (Kitchens) ────────────────────────
@@ -835,7 +842,7 @@ async function seed() {
     console.log("  kitchens_staging:         3 entries");
     console.log("  kitchen_roles:            3 entries");
     console.log("  kitchen_permissions:      6 base + 23 chat.*");
-    console.log("  kitchen_role_permissions: 12 base + chat on role_id=1");
+    console.log("  kitchen_role_permissions: 12 base + chat on owner role");
     console.log("  kitchen_users:            3 entries");
     console.log("  kitchen_user_roles:       3 entries");
     console.log("  ──────────────────────────────────────");
@@ -846,11 +853,11 @@ async function seed() {
     console.log("  customers:               3 entries");
     console.log("  customer_roles:           1 entry");
     console.log("  customer_permissions:    17 customer.* + 23 chat.*");
-    console.log("  customer_role_permissions: customer.* + chat on role_id=1");
+    console.log("  customer_role_permissions: customer.* + chat on Customer role");
     console.log("  customer_user_roles:      (non-deleted customers)");
     console.log("  chat_permissions:         23 keys × 3 tables (upsert)");
     console.log(
-      "  chat role_permissions:    role_id=1 (admin/kitchen/customer)",
+      "  chat role_permissions:    seeded admin/kitchen/customer roles",
     );
     console.log("  customer_favorites:      5 entries");
     console.log("  customer_addresses:      4 entries");
