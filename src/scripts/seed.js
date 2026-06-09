@@ -697,8 +697,9 @@ async function seed() {
         NOW(),
         NOW()
       )
-      ON CONFLICT (email) DO UPDATE SET
+      ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
+        email = EXCLUDED.email,
         company_code = EXCLUDED.company_code,
         phone = EXCLUDED.phone,
         password_hash = EXCLUDED.password_hash,

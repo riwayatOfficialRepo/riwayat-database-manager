@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node src/index.js",
-    "migrate": "node-pg-migrate up --no-check-order -m src/migrations",
+    "migrate": "node-pg-migrate up --no-check-order -m src/migrations ",
     "migrate:safe": "node src/scripts/verify-migrations.js && node-pg-migrate up --no-check-order -m src/migrations",
     "migrate:verify": "node src/scripts/verify-migrations.js",
     "migrate:verify:dry": "node src/scripts/verify-migrations.js --dry-run",
@@ -23,7 +23,7 @@
     "database",
     "postgresql",
     "connection-pool"
-  ], 
+  ],
   "author": "",
   "license": "ISC",
   "description": "PostgreSQL database service with connection pooling and monitoring",
