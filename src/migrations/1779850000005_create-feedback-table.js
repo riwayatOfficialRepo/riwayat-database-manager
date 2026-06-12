@@ -21,7 +21,7 @@ exports.up = (pgm) => {
       customer_id:                    { type: 'uuid' },
       kitchen_id:                     { type: 'uuid' },
       order_id:                       { type: 'uuid' },
-      feedback_business_ref:          { type: 'varchar(50)' },
+      feedback_business_reference:    { type: 'varchar(50)' },
       customer_business_reference:    { type: 'varchar(255)' },
       kitchen_business_reference:     { type: 'varchar(255)' },
       order_business_reference:       { type: 'varchar(255)' },
