@@ -34,7 +34,7 @@ exports.up = (pgm) => {
       customer_final_comments:      { type: 'text' },
       is_media_uploaded:            { type: 'boolean',     default: false },
       feedback_badge:               { type: 'jsonb' },
-      raised_case_types:            { type: 'jsonb',       default: "'[]'" },
+      raised_case_types:            { type: 'jsonb',       default: pgm.func("'[]'") },
       status:                       { type: 'varchar(50)' },
       to_be_published_date:         { type: 'date' },
       published_date:               { type: 'timestamptz' },
