@@ -10,7 +10,7 @@ exports.up = (pgm) => {
   `);
 
   pgm.createTable(
-    'feedback',
+    'feedbacks',
     {
       id: {
         type: 'uuid',
@@ -55,7 +55,7 @@ exports.up = (pgm) => {
 
   pgm.sql(`
     DO $$ BEGIN
-      ALTER TABLE feedback
+      ALTER TABLE feedbacks
         ADD CONSTRAINT feedback_feedback_type_check
         CHECK (feedback_type = ANY (ARRAY['Preorder', 'Postorder']));
     EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
@@ -64,14 +64,14 @@ exports.up = (pgm) => {
 
   pgm.sql(`
     CREATE OR REPLACE TRIGGER trg_update_feedback
-      BEFORE UPDATE ON feedback
+      BEFORE UPDATE ON feedbacks
       FOR EACH ROW
       EXECUTE FUNCTION update_feedback_updated_at();
   `);
 };
 
 exports.down = (pgm) => {
-  pgm.sql(`DROP TRIGGER IF EXISTS trg_update_feedback ON feedback`);
-  pgm.dropTable('feedback', { ifExists: true, cascade: true });
+  pgm.sql(`DROP TRIGGER IF EXISTS trg_update_feedback ON feedbacks`);
+  pgm.dropTable('feedbacks', { ifExists: true, cascade: true });
   pgm.sql(`DROP FUNCTION IF EXISTS update_feedback_updated_at()`);
 };
