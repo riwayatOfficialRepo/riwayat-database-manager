@@ -80,16 +80,6 @@ exports.up = (pgm) => {
   );
 
   pgm.sql(`
-    DO $$ BEGIN
-      ALTER TABLE promotion_target_variants
-        ADD CONSTRAINT promotion_target_variants_promotion_target_dish_id_fkey
-        FOREIGN KEY (promotion_target_dish_id) REFERENCES promotion_target_dishes(id)
-        ON UPDATE NO ACTION ON DELETE CASCADE;
-    EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-    END $$;
-  `);
-
-  pgm.sql(`
     CREATE OR REPLACE TRIGGER trg_update_promotion_target_variants
       BEFORE UPDATE ON promotion_target_variants
       FOR EACH ROW
