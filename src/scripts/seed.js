@@ -16,6 +16,19 @@
 const { pool, connectDB } = require("../database");
 const logger = require("../logger");
 
+async function tableExists(tableName) {
+  const result = await pool.query(
+    `
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = $1
+      LIMIT 1
+    `,
+    [tableName],
+  );
+  return result.rowCount > 0;
+}
+
 async function seed() {
   try {
     await connectDB();
@@ -49,7 +62,11 @@ async function seed() {
     );
 
     // ── 0.1 Rider Route Permissions (grant to role_id = 1) ───────
-    await pool.query(`
+    if (
+      (await tableExists("rider_permissions")) &&
+      (await tableExists("rider_role_permissions"))
+    ) {
+      await pool.query(`
       INSERT INTO rider_permissions (key, label_key, name) VALUES
         ('rider.auth.pin.set', 'perm.rider.auth.pin.set', 'POST /auth/set-pin — set PIN (first time)'),
         ('rider.auth.pin.change', 'perm.rider.auth.pin.change', 'POST /auth/change-pin — change PIN'),
@@ -100,7 +117,12 @@ async function seed() {
       )
       ON CONFLICT (role_id, permission_id) DO NOTHING;
     `);
-    logger.info("Rider route permissions seeded and granted to role_id=1");
+      logger.info("Rider route permissions seeded and granted to role_id=1");
+    } else {
+      logger.warn(
+        "Skipping rider route permission seed — rider RBAC tables are not present",
+      );
+    }
 
     // ── 1. Kitchens ──────────────────────────────────────────────
     const kitchensResult = await pool.query(`
@@ -903,6 +925,7 @@ async function seed() {
       ["chat.details.get", "Allow viewing chat details"],
       ["chat.close", "Allow closing a chat"],
       ["chat.reopen", "Allow reopening a chat"],
+      ["chat.resolve", "Allow resolving a chat"],
       ["chat.pin.toggle", "Allow toggling chat pin"],
       ["chat.message.send", "Allow sending chat messages"],
       ["chat.message.sendbulk", "Allow sending bulk chat messages"],

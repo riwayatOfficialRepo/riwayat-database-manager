@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node src/index.js",
-    "migrate": "node-pg-migrate up --no-check-order -m src/migrations ",
+    "migrate": "node-pg-migrate up --no-check-order -m src/migrations",
     "migrate:safe": "node src/scripts/verify-migrations.js && node-pg-migrate up --no-check-order -m src/migrations",
     "migrate:verify": "node src/scripts/verify-migrations.js",
     "migrate:verify:dry": "node src/scripts/verify-migrations.js --dry-run",
@@ -13,7 +13,7 @@
     "migrate:create": "node-pg-migrate create -m src/migrations",
     "migrate:redo": "node-pg-migrate redo -m src/migrations",
     "migrate:baseline": "node src/scripts/baseline.js",
-    "migrate:status": "node-pg-migrate status -m src/migrations",
+    "migrate:status": "node src/scripts/migrate-status.js",
     "migrate:reset": "node src/scripts/reset.js",
     "seed": "node src/scripts/seed.js",
     "backfill:rider-roles": "node src/scripts/backfill-rider-default-roles.js",
