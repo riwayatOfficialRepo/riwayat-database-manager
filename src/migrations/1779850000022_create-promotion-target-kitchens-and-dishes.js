@@ -19,7 +19,6 @@ exports.up = (pgm) => {
     promotion_target_id: { type: 'uuid',        notNull: true },
     kitchen_id:          { type: 'uuid',        notNull: true },
     apply_to_all_dishes: { type: 'boolean',     notNull: true, default: true },
-    operational_status:  { type: 'varchar(30)', notNull: true, default: "'DRAFT'" },
     status:              { type: 'varchar',     notNull: true, default: "'draft'" },
     created_at:          { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     updated_at:          { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
