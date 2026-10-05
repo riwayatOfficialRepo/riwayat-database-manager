@@ -17,11 +17,19 @@ exports.up = (pgm) => {
     { ifNotExists: true },
   );
 
-  pgm.addConstraint('variant_inventory_daily', 'variant_inventory_daily_variant_date_key', {
-    unique: ['dish_variant_id', 'inventory_date'],
-  });
+  pgm.sql(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_class WHERE relname = 'variant_inventory_daily_variant_date_key'
+      ) THEN
+        ALTER TABLE variant_inventory_daily
+          ADD CONSTRAINT variant_inventory_daily_variant_date_key UNIQUE (dish_variant_id, inventory_date);
+      END IF;
+    END $$;
+  `);
 
-  pgm.createIndex('variant_inventory_daily', ['kitchen_id', 'inventory_date']);
+  pgm.createIndex('variant_inventory_daily', ['kitchen_id', 'inventory_date'], { ifNotExists: true });
 
   pgm.sql(`
     CREATE OR REPLACE FUNCTION update_variant_inventory_daily_updated_at()

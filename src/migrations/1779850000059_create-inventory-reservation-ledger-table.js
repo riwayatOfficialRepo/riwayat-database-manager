@@ -19,8 +19,8 @@ exports.up = (pgm) => {
     { ifNotExists: true },
   );
 
-  pgm.createIndex('inventory_reservation_ledger', ['variant_inventory_daily_id', 'status']);
-  pgm.createIndex('inventory_reservation_ledger', ['order_id']);
+  pgm.createIndex('inventory_reservation_ledger', ['variant_inventory_daily_id', 'status'], { ifNotExists: true });
+  pgm.createIndex('inventory_reservation_ledger', ['order_id'], { ifNotExists: true });
 
   pgm.sql(`
     CREATE OR REPLACE FUNCTION update_inventory_reservation_ledger_updated_at()

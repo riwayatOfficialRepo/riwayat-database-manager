@@ -20,7 +20,7 @@ exports.up = (pgm) => {
     { ifNotExists: true },
   );
 
-  pgm.createIndex('variant_inventory_daily_history', ['variant_inventory_daily_id', 'created_at']);
+  pgm.createIndex('variant_inventory_daily_history', ['variant_inventory_daily_id', 'created_at'], { ifNotExists: true });
 };
 
 exports.down = (pgm) => {
