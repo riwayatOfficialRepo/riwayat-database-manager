@@ -178,59 +178,102 @@ async function seed() {
     logger.info("Kitchen roles seeded");
 
     // ── 4. Kitchen Permissions ───────────────────────────────────
-    await pool.query(`
-      INSERT INTO kitchen_permissions (key, label_key, name, description)
-      VALUES
-        ('kitchen.manage', 'perm.kitchen.manage', 'Manage Kitchen', 'Create, update, and delete kitchen settings'),
-        ('menu.manage', 'perm.menu.manage', 'Manage Menu', 'Create, update, and delete menu items'),
-        ('order.view', 'perm.order.view', 'View Orders', 'View incoming and past orders'),
-        ('order.manage', 'perm.order.manage', 'Manage Orders', 'Accept, reject, and update order status'),
-        ('staff.manage', 'perm.staff.manage', 'Manage Staff', 'Invite, remove, and assign roles to staff'),
-        ('analytics.view', 'perm.analytics.view', 'View Analytics', 'View kitchen performance and analytics')
-      ON CONFLICT (key) DO NOTHING;
-    `);
-    const permsResult = await pool.query(
-      `SELECT id, key FROM kitchen_permissions WHERE key IN ('kitchen.manage', 'menu.manage', 'order.view', 'order.manage', 'staff.manage', 'analytics.view')`,
-    );
-    const perms = {};
-    permsResult.rows.forEach((p) => {
-      perms[p.key] = p.id;
-    });
-    logger.info("Kitchen permissions seeded");
-
-    // ── 5. Kitchen Role Permissions (mapping) ────────────────────
-    // Owner gets all permissions
-    // Manager gets menu, orders, and analytics
-    // Chef gets order view and order manage
-    const rolePermMappings = [
-      // Owner
-      [roles.owner, perms["kitchen.manage"]],
-      [roles.owner, perms["menu.manage"]],
-      [roles.owner, perms["order.view"]],
-      [roles.owner, perms["order.manage"]],
-      [roles.owner, perms["staff.manage"]],
-      [roles.owner, perms["analytics.view"]],
-      // Manager
-      [roles.manager, perms["menu.manage"]],
-      [roles.manager, perms["order.view"]],
-      [roles.manager, perms["order.manage"]],
-      [roles.manager, perms["analytics.view"]],
-      // Chef
-      [roles.chef, perms["order.view"]],
-      [roles.chef, perms["order.manage"]],
+    const kitchenPermissionKeys = [
+      // KITCHEN
+      'kitchen.create', 'kitchen.update', 'kitchen.delete',
+      'kitchen.list.view', 'kitchen.detail.view',
+      'kitchen.address.create', 'kitchen.address.edit', 'kitchen.address.list.view',
+      'kitchen.partner.list.view',
+      'kitchen.availability.add', 'kitchen.availability.view',
+      'kitchen.chef.invite', 'kitchen.submit', 'kitchen.request.list.view',
+      'kitchen.media.create', 'kitchen.media.delete', 'kitchen.media.list.view',
+      'kitchen.dish.list.view',
+      'kitchen.user.invite.list.view', 'kitchen.user.invite.send',
+      'kitchen.user.invite.resend', 'kitchen.user.invite.revoke',
+      'kitchen.user.invite.detail.view',
+      'kitchen.user.doc.create', 'kitchen.user.doc.list.view',
+      'kitchen.onboarding.submit',
+      'kitchen.chef.story.create', 'kitchen.chef.story.edit', 'kitchen.chef.story.list.view',
+      // DISH
+      'dish.create', 'dish.edit', 'dish.list.view', 'dish.detail.view',
+      'dish.variant.create', 'dish.variant.list.view', 'dish.variant.detail.view', 'dish.variant.edit',
+      'dish.variant.item.create', 'dish.variant.item.edit',
+      'dish.variant.item.detail.view', 'dish.variant.item.list.view', 'dish.variant.item.delete',
+      'dish.availability.add', 'dish.availability.view',
+      'dish.specialEvent.create', 'dish.specialEvent.edit',
+      'dish.specialEvent.list.view', 'dish.specialEvent.detail.view',
+      'dish.media.upload', 'dish.media.edit', 'dish.media.publish',
+      'dish.media.delete', 'dish.media.list.view',
+      'dish.submit',
+      'dish.addon.create', 'dish.addon.edit', 'dish.addon.list.view', 'dish.addon.detail.view',
+      'dish.modifier.create', 'dish.modifier.edit', 'dish.modifier.list.view', 'dish.modifier.detail.view',
+      'dish.recommended.create', 'dish.recommended.edit', 'dish.recommended.list.view',
+      // PROMOTION
+      'promotion.create', 'promotion.edit', 'promotion.delete',
+      'promotion.list.view', 'promotion.detail.view', 'promotion.submit',
+      // INVENTORY
+      'inventory.view', 'inventory.generate', 'inventory.edit',
+      // FEEDBACK (kitchen-side access uses admin.feedback.* keys)
+      'admin.feedback.list.view', 'admin.feedback.detail.view', 'admin.feedback.edit',
     ];
 
-    for (const [roleId, permId] of rolePermMappings) {
+    for (const key of kitchenPermissionKeys) {
       await pool.query(
-        `
-        INSERT INTO kitchen_role_permissions (role_id, permission_id)
-        VALUES ($1, $2)
-        ON CONFLICT (role_id, permission_id) DO NOTHING
-      `,
-        [roleId, permId],
+        `INSERT INTO kitchen_permissions (key, label_key, name)
+         VALUES ($1, $2, $1)
+         ON CONFLICT (key) DO NOTHING`,
+        [key, `perm.${key}`],
       );
     }
-    logger.info("Kitchen role permissions seeded");
+    logger.info({ count: kitchenPermissionKeys.length }, "Kitchen permissions seeded");
+
+    // ── 5. Kitchen Role Permissions (mapping) ────────────────────
+    // Owner: all permissions
+    await pool.query(
+      `INSERT INTO kitchen_role_permissions (role_id, permission_id)
+       SELECT r.id, p.id
+       FROM kitchen_roles r, kitchen_permissions p
+       WHERE r.name = 'owner'
+         AND p.key = ANY($1::text[])
+       ON CONFLICT (role_id, permission_id) DO NOTHING`,
+      [kitchenPermissionKeys],
+    );
+
+    // Chef: operational access — no kitchen management, no invitations, no promotions
+    const chefPermissionKeys = [
+      'kitchen.list.view', 'kitchen.detail.view',
+      'kitchen.availability.add', 'kitchen.availability.view',
+      'kitchen.media.create', 'kitchen.media.delete', 'kitchen.media.list.view',
+      'kitchen.dish.list.view',
+      'kitchen.chef.story.create', 'kitchen.chef.story.edit', 'kitchen.chef.story.list.view',
+      'dish.create', 'dish.edit', 'dish.list.view', 'dish.detail.view',
+      'dish.variant.create', 'dish.variant.list.view', 'dish.variant.detail.view', 'dish.variant.edit',
+      'dish.variant.item.create', 'dish.variant.item.edit',
+      'dish.variant.item.detail.view', 'dish.variant.item.list.view', 'dish.variant.item.delete',
+      'dish.availability.add', 'dish.availability.view',
+      'dish.specialEvent.create', 'dish.specialEvent.edit',
+      'dish.specialEvent.list.view', 'dish.specialEvent.detail.view',
+      'dish.media.upload', 'dish.media.edit', 'dish.media.publish',
+      'dish.media.delete', 'dish.media.list.view',
+      'dish.submit',
+      'dish.addon.create', 'dish.addon.edit', 'dish.addon.list.view', 'dish.addon.detail.view',
+      'dish.modifier.create', 'dish.modifier.edit', 'dish.modifier.list.view', 'dish.modifier.detail.view',
+      'dish.recommended.create', 'dish.recommended.edit', 'dish.recommended.list.view',
+      'inventory.view', 'inventory.generate', 'inventory.edit',
+      'admin.feedback.list.view', 'admin.feedback.detail.view', 'admin.feedback.edit',
+    ];
+
+    await pool.query(
+      `INSERT INTO kitchen_role_permissions (role_id, permission_id)
+       SELECT r.id, p.id
+       FROM kitchen_roles r, kitchen_permissions p
+       WHERE r.name = 'chef'
+         AND p.key = ANY($1::text[])
+       ON CONFLICT (role_id, permission_id) DO NOTHING`,
+      [chefPermissionKeys],
+    );
+
+    logger.info("Kitchen role permissions seeded (owner: all, chef: operational subset)");
 
     // ── 6. Kitchen Users ─────────────────────────────────────────
     const usersData = [
@@ -1224,8 +1267,8 @@ async function seed() {
     console.log("  kitchens:                 3 entries");
     console.log("  kitchens_staging:         3 entries");
     console.log("  kitchen_roles:            3 entries");
-    console.log("  kitchen_permissions:      6 base + 23 chat.*");
-    console.log("  kitchen_role_permissions: 12 base + chat on owner role");
+    console.log("  kitchen_permissions:      67 base (kitchen/dish/promotion/inventory/feedback) + 23 chat.*");
+    console.log("  kitchen_role_permissions: owner=all, chef=operational subset + chat on owner role");
     console.log("  kitchen_users:            3 entries");
     console.log("  kitchen_user_roles:       3 entries");
     console.log("  ──────────────────────────────────────");
