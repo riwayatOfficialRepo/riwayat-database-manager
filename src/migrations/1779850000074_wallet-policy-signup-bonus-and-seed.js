@@ -35,8 +35,9 @@ exports.up = (pgm) => {
   });
 
   pgm.sql(`
-    INSERT INTO wallet_policy (expiry_days, max_redeem_cap, signup_bonus_enabled, signup_bonus_points, signup_bonus_expiry_days)
-    SELECT 90, 500, true, 50, 365
+    INSERT INTO wallet_policy (id, expiry_days, max_redeem_cap, signup_bonus_enabled, signup_bonus_points, signup_bonus_expiry_days)
+    OVERRIDING SYSTEM VALUE
+    SELECT COALESCE((SELECT MAX(id) FROM wallet_policy), 0) + 1, 90, 500, true, 50, 365
     WHERE NOT EXISTS (SELECT 1 FROM wallet_policy WHERE deleted_at IS NULL);
   `);
 };
