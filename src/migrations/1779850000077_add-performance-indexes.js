@@ -88,7 +88,7 @@ exports.up = (pgm) => {
   });
 
   // ─── dish_variant_items ───────────────────────────────────────────────────
-  pgm.createIndex('dish_variant_items', ['dish_variant_id'], {
+  pgm.createIndex('dish_variant_items', ['variant_id'], {
     name: 'idx_dish_variant_items_variant_id',
     ifNotExists: true,
   });
