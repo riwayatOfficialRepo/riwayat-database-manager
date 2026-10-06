@@ -24,12 +24,9 @@ exports.up = (pgm) => {
   });
 
   // ─── kitchen_users ────────────────────────────────────────────────────────
+  // phone/status already indexed in migration 003; only kitchen_id is missing
   pgm.createIndex('kitchen_users', ['kitchen_id'], {
     name: 'idx_kitchen_users_kitchen_id',
-    ifNotExists: true,
-  });
-  pgm.createIndex('kitchen_users', ['user_id'], {
-    name: 'idx_kitchen_users_user_id',
     ifNotExists: true,
   });
 
@@ -198,7 +195,6 @@ exports.down = (pgm) => {
     'idx_kitchens_operational_status',
     'idx_kitchens_created_at',
     'idx_kitchen_users_kitchen_id',
-    'idx_kitchen_users_user_id',
     'idx_kui_kitchen_id',
     'idx_kui_phone_kitchen_status',
     'idx_kui_email_kitchen',
