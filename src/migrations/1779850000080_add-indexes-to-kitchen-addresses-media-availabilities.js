@@ -11,8 +11,8 @@ exports.up = (pgm) => {
     ifNotExists: true,
   });
 
-  pgm.createIndex('kitchen_availabilities', ['kitchen_id'], {
-    name: 'idx_kitchen_availabilities_kitchen_id',
+  pgm.createIndex('kitchen_availability', ['kitchen_id'], {
+    name: 'idx_kitchen_availability_kitchen_id',
     where: 'deleted_at IS NULL',
     ifNotExists: true,
   });
@@ -21,5 +21,5 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.dropIndex('kitchen_addresses', [], { name: 'idx_kitchen_addresses_kitchen_id', ifExists: true });
   pgm.dropIndex('kitchen_media', [], { name: 'idx_kitchen_media_kitchen_id', ifExists: true });
-  pgm.dropIndex('kitchen_availabilities', [], { name: 'idx_kitchen_availabilities_kitchen_id', ifExists: true });
+  pgm.dropIndex('kitchen_availability', [], { name: 'idx_kitchen_availability_kitchen_id', ifExists: true });
 };
