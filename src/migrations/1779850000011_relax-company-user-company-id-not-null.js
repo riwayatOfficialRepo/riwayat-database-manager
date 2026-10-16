@@ -12,12 +12,21 @@ exports.up = (pgm) => {
     END $$;
   `);
 
+  // Only relevant on legacy DBs that actually have company_id. Guard so a fresh
+  // schema (which uses company_code instead) skips the backfill instead of erroring.
   pgm.sql(`
-    UPDATE company_user
-    SET company_id = business_reference::uuid
-    WHERE company_id IS NULL
-      AND business_reference IS NOT NULL
-      AND business_reference ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'company_user' AND column_name = 'company_id'
+      ) THEN
+        UPDATE company_user
+        SET company_id = business_reference::uuid
+        WHERE company_id IS NULL
+          AND business_reference IS NOT NULL
+          AND business_reference ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+      END IF;
+    END $$;
   `);
 };
 
