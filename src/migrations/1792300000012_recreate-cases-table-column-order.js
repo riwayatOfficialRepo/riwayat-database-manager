@@ -1,11 +1,11 @@
 /**
- * Recreate public.cases with a readable column order, add raised_on_behalf_type, drop initiator_detail
+ * Recreate public.cases with a readable column order and add raised_on_behalf_type
  *
  * PostgreSQL cannot reorder columns, so the table is rebuilt: lock, copy into public.cases_reordered,
  * check the row count, drop the old table, rename, re-add the keys and indexes with their old names, then
  * ANALYZE the new table so the planner has statistics straight away.
  * Rows are preserved. This runs on PRODUCTION with every deploy, so up() is guarded:
- *   - already rebuilt (raised_on_behalf_type present, initiator_detail gone): does nothing and takes no lock;
+ *   - already rebuilt (raised_on_behalf_type present): does nothing and takes no lock;
  *   - otherwise it sets lock_timeout to 5s (SET LOCAL: until the migration transaction ends) and takes
  *     ACCESS EXCLUSIVE on public.cases. If a long query holds the table, the migration fails after 5s
  *     (re-run the deploy) instead of queueing all case traffic behind it. The checks below run under the lock:
@@ -13,10 +13,12 @@
  *   - something it would not recreate exists (a foreign key, view, trigger, index or constraint, explicit
  *     grants, a publication, a table or column comment): stops with an error
  *     (it never uses CASCADE, so nothing is dropped silently).
- * initiator_detail is folded into initiated_by_details where that is empty.
+ * initiator_detail is folded into initiated_by_details where that is empty, and is itself kept (as the last
+ * column): the riwayat-case-manager that runs until the apps are redeployed still writes it, so dropping it
+ * here would break case creation in between. 1792300000015 drops it in the next release.
  * New column raised_on_behalf_type (varchar 50) with index idx_cases_raised_on_behalf.
  *
- * down() never drops data: it only restores initiator_detail (copied from initiated_by_details).
+ * down() does nothing: no column was removed, and restoring the old order would need another rebuild.
  */
 
 exports.up = (pgm) => {
@@ -53,7 +55,7 @@ BEGIN
   SELECT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.cases'::regclass AND attname = 'raised_on_behalf_type' AND NOT attisdropped)
     INTO has_type;
 
-  IF has_type AND NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.cases'::regclass AND attname = 'initiator_detail' AND NOT attisdropped) THEN
+  IF has_type THEN
     RETURN; -- already rebuilt
   END IF;
 
@@ -141,7 +143,8 @@ BEGIN
     dedupe_hash                       character varying(64) DEFAULT NULL::character varying,
     created_at                        timestamp with time zone CONSTRAINT cases_created_at_not_null NOT NULL DEFAULT now(),
     updated_at                        timestamp with time zone CONSTRAINT cases_updated_at_not_null NOT NULL DEFAULT now(),
-    deleted_at                        timestamp with time zone
+    deleted_at                        timestamp with time zone,
+    initiator_detail                  jsonb
   );
 
   SELECT count(*) INTO old_count FROM public.cases;
@@ -157,7 +160,7 @@ BEGIN
     assigned_dc_user, assigned_dc_user_at, assigned_dc_user_details,
     assigned_team_user, assigned_team_user_at, assigned_team_user_details,
     forwarded_to, forwarded_to_type, idempotency_key, dedupe_hash,
-    created_at, updated_at, deleted_at
+    created_at, updated_at, deleted_at, initiator_detail
   )
   SELECT
     case_id, case_number, title, description, case_category, case_type, case_subtype,
@@ -169,7 +172,7 @@ BEGIN
     assigned_dc_user, assigned_dc_user_at, assigned_dc_user_details,
     assigned_team_user, assigned_team_user_at, assigned_team_user_details,
     forwarded_to, forwarded_to_type, idempotency_key, dedupe_hash,
-    created_at, updated_at, deleted_at
+    created_at, updated_at, deleted_at, initiator_detail
   FROM public.cases
   $copy$, CASE WHEN has_type THEN 'raised_on_behalf_type' ELSE 'NULL::character varying' END);
   GET DIAGNOSTICS copied_count = ROW_COUNT;
@@ -200,17 +203,6 @@ $recreate$;
 `);
 };
 
-// Restores initiator_detail only. raised_on_behalf_type, idx_cases_raised_on_behalf and the new column
-// order stay: dropping the column would lose data, and restoring the old order would need another rebuild.
-exports.down = (pgm) => {
-  pgm.sql(String.raw`
-DO $restore$
-BEGIN
-  IF to_regclass('public.cases') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('public.cases') AND attname = 'initiator_detail' AND NOT attisdropped) THEN
-    ALTER TABLE public.cases ADD COLUMN initiator_detail jsonb;
-    UPDATE public.cases SET initiator_detail = initiated_by_details;
-  END IF;
-END
-$restore$;
-`);
-};
+// Nothing to undo: no column was removed (raised_on_behalf_type and its index are kept, as dropping them
+// would lose data), and restoring the old column order would need another rebuild.
+exports.down = () => {};
