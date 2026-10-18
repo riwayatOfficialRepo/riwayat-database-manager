@@ -1,14 +1,15 @@
 /**
- * Create public.case_policy_rule and seed it: the two-level case taxonomy (category -> case_type)
+ * Create case_policy_rule and seed it: the two-level case taxonomy (category -> case_type)
  *
  * One row per (case_category, case_type). It decides who may raise the type (allowed_raisers:
  * CUSTOMER, KITCHEN, TEAM), which subject types it accepts, its priority, its SLA in hours and whether
- * it is internal (TEAM only), and its status (ACTIVE | INACTIVE). riwayat-case-manager reads only ACTIVE rows; the old third level
- * (case_subtype) is now always stored equal to case_type.
+ * it is internal (TEAM only), and its status (ACTIVE | INACTIVE). riwayat-case-manager reads only ACTIVE
+ * rows; the old third level (case_subtype) is now always stored equal to case_type.
  *
- * up() is idempotent: the table is created only if it does not exist, and the seed uses
- * ON CONFLICT (case_category, case_type) DO NOTHING, so rows edited later in production are never
- * overwritten. No extra indexes: the unique constraint covers the lookups.
+ * up() is idempotent: the table is created only if it does not exist (createTable ifNotExists), each named
+ * constraint is added only if missing, the updated_at trigger (set_updated_at(), as in 1792300000010) is
+ * created only if missing, and the seed uses ON CONFLICT (case_category, case_type) DO NOTHING, so rows
+ * edited later in production are never overwritten. No extra indexes: the unique constraint covers the lookups.
  *
  * The 6 SYSTEM_GENERATED_COMPLAINTS types (SLA_BREACH, REFUND_DELAY_72_HOURS, REPEATED_CANCELLATIONS,
  * LOW_RATING_ALERT, PAYMENT_RECONCILIATION_FAILURE, DUPLICATE_TRANSACTION_DETECTED) had no subtypes
@@ -56,31 +57,61 @@
  *   VERIFICATION_ISSUE      <- MISSING_CNIC_LICENSE, EXPIRED_VERIFICATION_DOCS, WRONG_ADDRESS_MISMATCH, UNVERIFIED_DUPLICATE_KITCHEN
  *   CUSTOMER_ABUSE          <- ABUSIVE_COMPLAINTS, REFUND_POLICY_MISUSE, FAKE_OR_DUPLICATE_ORDERS
  *
- * down() drops the table. It holds configuration only (no case data), so nothing else is lost.
+ * down() drops the table (with its constraints and trigger). That deletes every policy row, including any
+ * edits made in production after the seed (changed priorities, SLAs, raisers, statuses, added rows); they
+ * are NOT restored by running up() again, which only re-inserts the seed above. Back the table up first.
+ * No case data lives in this table, so cases themselves are not affected.
  */
 
 exports.up = (pgm) => {
-  pgm.sql(String.raw`
-CREATE TABLE IF NOT EXISTS case_policy_rule (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  case_category VARCHAR(100) NOT NULL,
-  case_type VARCHAR(100) NOT NULL,
-  allowed_raisers JSONB NOT NULL DEFAULT '[]'::jsonb,
-  allowed_subject_types JSONB NOT NULL DEFAULT '[]'::jsonb,
-  priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
-  sla_hours INTEGER NOT NULL DEFAULT 24,
-  is_internal BOOLEAN NOT NULL DEFAULT FALSE,
-  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_case_policy_category_type UNIQUE (case_category, case_type),
-  CONSTRAINT chk_case_policy_priority CHECK (priority IN ('LOW','MEDIUM','HIGH','CRITICAL')),
-  CONSTRAINT chk_case_policy_sla CHECK (sla_hours > 0),
-  CONSTRAINT chk_case_policy_status CHECK (status IN ('ACTIVE','INACTIVE')),
-  CONSTRAINT chk_case_policy_raisers CHECK (jsonb_typeof(allowed_raisers) = 'array'),
-  CONSTRAINT chk_case_policy_subjects CHECK (jsonb_typeof(allowed_subject_types) = 'array')
-);
+  pgm.createTable('case_policy_rule', {
+    id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },
+    case_category: { type: 'varchar(100)', notNull: true },
+    case_type: { type: 'varchar(100)', notNull: true },
+    allowed_raisers: { type: 'jsonb', notNull: true, default: pgm.func(`'[]'::jsonb`) },
+    allowed_subject_types: { type: 'jsonb', notNull: true, default: pgm.func(`'[]'::jsonb`) },
+    priority: { type: 'varchar(20)', notNull: true, default: 'MEDIUM' },
+    sla_hours: { type: 'integer', notNull: true, default: 24 },
+    is_internal: { type: 'boolean', notNull: true, default: false },
+    status: { type: 'varchar(20)', notNull: true, default: 'ACTIVE' },
+    created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
+  }, { ifNotExists: true });
 
+  // Named constraints, each added only if missing (pgm.addConstraint has no IF NOT EXISTS).
+  pgm.sql(String.raw`
+DO $constraints$
+DECLARE
+  defs text[][] := ARRAY[
+    ['uq_case_policy_category_type', 'UNIQUE (case_category, case_type)'],
+    ['chk_case_policy_priority',     $c$CHECK (priority IN ('LOW','MEDIUM','HIGH','CRITICAL'))$c$],
+    ['chk_case_policy_sla',          'CHECK (sla_hours > 0)'],
+    ['chk_case_policy_status',       $c$CHECK (status IN ('ACTIVE','INACTIVE'))$c$],
+    ['chk_case_policy_raisers',      $c$CHECK (jsonb_typeof(allowed_raisers) = 'array')$c$],
+    ['chk_case_policy_subjects',     $c$CHECK (jsonb_typeof(allowed_subject_types) = 'array')$c$]
+  ];
+  i int;
+BEGIN
+  FOR i IN 1 .. array_length(defs, 1) LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'case_policy_rule'::regclass AND conname = defs[i][1]) THEN
+      EXECUTE format('ALTER TABLE case_policy_rule ADD CONSTRAINT %I %s', defs[i][1], defs[i][2]);
+    END IF;
+  END LOOP;
+END
+$constraints$;
+`);
+
+  pgm.sql(String.raw`
+DO $trigger$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_case_policy_rule_updated_at' AND tgrelid = to_regclass('case_policy_rule')) THEN
+CREATE TRIGGER trg_case_policy_rule_updated_at BEFORE UPDATE ON case_policy_rule FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+END
+$trigger$;
+`);
+
+  pgm.sql(String.raw`
 INSERT INTO case_policy_rule (case_category, case_type, allowed_raisers, allowed_subject_types, priority, sla_hours, is_internal) VALUES
   ('DELIVERY',        'LATE_DELIVERY',           '["CUSTOMER","KITCHEN","TEAM"]', '["ORDER","DELIVERY"]',             'MEDIUM', 4,  false),
   ('DELIVERY',        'RIDER_NO_SHOW',           '["KITCHEN","TEAM"]',            '["ORDER","DELIVERY"]',             'HIGH',   2,  false),
@@ -126,6 +157,7 @@ ON CONFLICT (case_category, case_type) DO NOTHING;
 `);
 };
 
+// Loses all policy edits made in production (see header).
 exports.down = (pgm) => {
-  pgm.sql('DROP TABLE IF EXISTS case_policy_rule;');
+  pgm.dropTable('case_policy_rule', { ifExists: true });
 };

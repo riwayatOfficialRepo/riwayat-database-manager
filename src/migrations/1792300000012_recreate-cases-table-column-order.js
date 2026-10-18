@@ -2,11 +2,16 @@
  * Recreate public.cases with a readable column order, add raised_on_behalf_type, drop initiator_detail
  *
  * PostgreSQL cannot reorder columns, so the table is rebuilt: lock, copy into public.cases_reordered,
- * check the row count, drop the old table, rename, then re-add the keys and indexes with their old names.
+ * check the row count, drop the old table, rename, re-add the keys and indexes with their old names, then
+ * ANALYZE the new table so the planner has statistics straight away.
  * Rows are preserved. This runs on PRODUCTION with every deploy, so up() is guarded:
- *   - already rebuilt (raised_on_behalf_type present, initiator_detail gone): does nothing;
+ *   - already rebuilt (raised_on_behalf_type present, initiator_detail gone): does nothing and takes no lock;
+ *   - otherwise it sets lock_timeout to 5s (SET LOCAL: until the migration transaction ends) and takes
+ *     ACCESS EXCLUSIVE on public.cases. If a long query holds the table, the migration fails after 5s
+ *     (re-run the deploy) instead of queueing all case traffic behind it. The checks below run under the lock:
  *   - a column the copy needs is missing (migrations 1792300000010/11 not applied): stops with an error;
- *   - a foreign key, view, trigger, index or constraint it would not recreate exists: stops with an error
+ *   - something it would not recreate exists (a foreign key, view, trigger, index or constraint, explicit
+ *     grants, a publication, a table or column comment): stops with an error
  *     (it never uses CASCADE, so nothing is dropped silently).
  * initiator_detail is folded into initiated_by_details where that is empty.
  * New column raised_on_behalf_type (varchar 50) with index idx_cases_raised_on_behalf.
@@ -52,6 +57,11 @@ BEGIN
     RETURN; -- already rebuilt
   END IF;
 
+  -- Fail fast instead of queueing every case query behind a lock wait on a long-running query.
+  -- The checks below run under the lock, so nothing can change between them and the rebuild.
+  SET LOCAL lock_timeout = '5s';
+  LOCK TABLE public.cases IN ACCESS EXCLUSIVE MODE;
+
   SELECT string_agg(c, ', ') INTO missing_cols
   FROM unnest(required_cols) AS c
   WHERE NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.cases'::regclass AND attname = c AND NOT attisdropped);
@@ -78,12 +88,25 @@ BEGIN
     UNION ALL
     SELECT format('index %s', indexname)
       FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'cases' AND indexname <> ALL (known_indexes)
+    UNION ALL
+    SELECT 'explicit grants'
+      FROM pg_class WHERE oid = 'public.cases'::regclass AND relacl IS NOT NULL
+    UNION ALL
+    SELECT format('publication %s', p.pubname)
+      FROM pg_publication_rel pr JOIN pg_publication p ON p.oid = pr.prpubid
+     WHERE pr.prrelid = 'public.cases'::regclass
+    UNION ALL
+    SELECT 'table comment'
+     WHERE obj_description('public.cases'::regclass, 'pg_class') IS NOT NULL
+    UNION ALL
+    SELECT format('comment on column %s', attname)
+      FROM pg_attribute
+     WHERE attrelid = 'public.cases'::regclass AND attnum > 0 AND NOT attisdropped
+       AND col_description('public.cases'::regclass, attnum) IS NOT NULL
   ) found;
   IF blockers IS NOT NULL THEN
     RAISE EXCEPTION 'public.cases has objects this migration would not recreate: %', blockers;
   END IF;
-
-  LOCK TABLE public.cases IN ACCESS EXCLUSIVE MODE;
 
   CREATE TABLE public.cases_reordered (
     case_id                           uuid CONSTRAINT cases_case_id_not_null NOT NULL DEFAULT gen_random_uuid(),
@@ -170,6 +193,8 @@ BEGIN
   CREATE INDEX idx_cases_primary_entity ON public.cases USING btree (primary_entity_type, primary_entity_id);
   CREATE INDEX idx_cases_status ON public.cases USING btree (status);
   CREATE INDEX idx_cases_raised_on_behalf ON public.cases USING btree (raised_on_behalf_type, raised_on_behalf_id);
+
+  ANALYZE public.cases;
 END
 $recreate$;
 `);
