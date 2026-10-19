@@ -24,7 +24,8 @@ ALTER TABLE public.cases DROP COLUMN IF EXISTS current_actor CASCADE;
 
 ALTER TABLE public.cases DROP COLUMN IF EXISTS kitchen_id CASCADE;
 
-ALTER TABLE public.cases DROP COLUMN IF EXISTS raised_on_behalf_role CASCADE;
+-- cases.raised_on_behalf_role is kept here: 1792300000012 copies it into raised_on_behalf_type
+-- and the rebuild removes it.
 
 ALTER TABLE public.cases DROP COLUMN IF EXISTS updated_by CASCADE;
 

@@ -7,8 +7,10 @@
  * on a fresh database it recreates what production has.
  * down() is intentionally a no-op so that migrate:down can never drop live tables or data.
  * 
- * Tables: loyalty_awards, wallet_accounts, wallet_ledger
+ * Tables: loyalty_awards, wallet_accounts
  * Foreign keys are added in the "new-table-foreign-keys" migration.
+ * wallet_ledger is not recreated: it is obsolete (customer_wallet_ledger replaces it) and
+ * 1779900000005_drop-obsolete-wallet-ledger-table drops it.
  */
 
 exports.up = (pgm) => {
@@ -71,38 +73,6 @@ ALTER TABLE ONLY public.wallet_accounts
     ADD CONSTRAINT wallet_accounts_customer_id_key1 UNIQUE (customer_id);
 ALTER TABLE ONLY public.wallet_accounts
     ADD CONSTRAINT wallet_accounts_pkey1 PRIMARY KEY (wallet_account_id);
-  END IF;
-END
-$sync$;
-
--- wallet_ledger
-DO $sync$
-BEGIN
-  IF to_regclass('public.wallet_ledger') IS NULL THEN
-CREATE SEQUENCE IF NOT EXISTS public.wallet_ledger_ledger_id_seq1
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-CREATE TABLE public.wallet_ledger (
-    ledger_id bigint NOT NULL,
-    wallet_account_id bigint NOT NULL,
-    award_id bigint,
-    transaction_type character varying(20) NOT NULL,
-    points numeric(12,2) NOT NULL,
-    reason character varying(50) NOT NULL,
-    redemption_request_id character varying(100),
-    correlation_id character varying(100),
-    metadata jsonb,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-ALTER SEQUENCE public.wallet_ledger_ledger_id_seq1 OWNED BY public.wallet_ledger.ledger_id;
-ALTER TABLE ONLY public.wallet_ledger ALTER COLUMN ledger_id SET DEFAULT nextval('public.wallet_ledger_ledger_id_seq1'::regclass);
-ALTER TABLE ONLY public.wallet_ledger
-    ADD CONSTRAINT wallet_ledger_pkey1 PRIMARY KEY (ledger_id);
-ALTER TABLE ONLY public.wallet_ledger
-    ADD CONSTRAINT wallet_ledger_redemption_request_id_key1 UNIQUE (redemption_request_id);
   END IF;
 END
 $sync$;

@@ -11,12 +11,16 @@
  *     (re-run the deploy) instead of queueing all case traffic behind it. The checks below run under the lock:
  *   - a column the copy needs is missing (migrations 1792300000010/11 not applied): stops with an error;
  *   - something it would not recreate exists (a foreign key, view, trigger, index or constraint, explicit
- *     grants, a publication, a table or column comment): stops with an error
- *     (it never uses CASCADE, so nothing is dropped silently).
+ *     grants, a publication, a table or column comment, row-level security, storage parameters): stops
+ *     with an error (it never uses CASCADE, so nothing is dropped silently).
+ * The table owner is restored after the rebuild, so the app role keeps access when migrations run as
+ * another role.
  * initiator_detail is folded into initiated_by_details where that is empty, and is itself kept (as the last
  * column): the riwayat-case-manager that runs until the apps are redeployed still writes it, so dropping it
- * here would break case creation in between. 1792300000015 drops it in the next release.
- * New column raised_on_behalf_type (varchar 50) with index idx_cases_raised_on_behalf.
+ * here would break case creation in between. 1792300000016 drops it in the next release.
+ * New column raised_on_behalf_type (varchar 50) with index idx_cases_raised_on_behalf. On databases built
+ * from master it is filled from raised_on_behalf_role (kept by 1792300000011 for this), which the rebuild
+ * then removes.
  *
  * down() does nothing: no column was removed, and restoring the old order would need another rebuild.
  */
@@ -45,6 +49,8 @@ DECLARE
   missing_cols    text;
   blockers        text;
   has_type        boolean;
+  has_role        boolean;
+  old_owner       name;
   old_count       bigint;
   copied_count    bigint;
 BEGIN
@@ -105,6 +111,15 @@ BEGIN
       FROM pg_attribute
      WHERE attrelid = 'public.cases'::regclass AND attnum > 0 AND NOT attisdropped
        AND col_description('public.cases'::regclass, attnum) IS NOT NULL
+    UNION ALL
+    SELECT format('policy %s', polname)
+      FROM pg_policy WHERE polrelid = 'public.cases'::regclass
+    UNION ALL
+    SELECT 'row level security'
+      FROM pg_class WHERE oid = 'public.cases'::regclass AND (relrowsecurity OR relforcerowsecurity)
+    UNION ALL
+    SELECT format('storage parameters %s', array_to_string(reloptions, ', '))
+      FROM pg_class WHERE oid = 'public.cases'::regclass AND reloptions IS NOT NULL
   ) found;
   IF blockers IS NOT NULL THEN
     RAISE EXCEPTION 'public.cases has objects this migration would not recreate: %', blockers;
@@ -148,8 +163,12 @@ BEGIN
   );
 
   SELECT count(*) INTO old_count FROM public.cases;
+  SELECT pg_get_userbyid(relowner) INTO old_owner FROM pg_class WHERE oid = 'public.cases'::regclass;
+  SELECT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.cases'::regclass AND attname = 'raised_on_behalf_role' AND NOT attisdropped)
+    INTO has_role;
 
-  -- raised_on_behalf_type is new (NULL); it is copied only when a previous down() left it in place.
+  -- raised_on_behalf_type is new: filled from raised_on_behalf_role where that column exists (databases
+  -- built from master), NULL otherwise (production never had it).
   EXECUTE format($copy$
   INSERT INTO public.cases_reordered (
     case_id, case_number, title, description, case_category, case_type, case_subtype,
@@ -174,7 +193,7 @@ BEGIN
     forwarded_to, forwarded_to_type, idempotency_key, dedupe_hash,
     created_at, updated_at, deleted_at, initiator_detail
   FROM public.cases
-  $copy$, CASE WHEN has_type THEN 'raised_on_behalf_type' ELSE 'NULL::character varying' END);
+  $copy$, CASE WHEN has_role THEN 'raised_on_behalf_role' ELSE 'NULL::character varying' END);
   GET DIAGNOSTICS copied_count = ROW_COUNT;
 
   IF copied_count <> old_count THEN
@@ -183,6 +202,7 @@ BEGIN
 
   DROP TABLE public.cases;
   ALTER TABLE public.cases_reordered RENAME TO cases;
+  EXECUTE format('ALTER TABLE public.cases OWNER TO %I', old_owner);
 
   ALTER TABLE public.cases ADD CONSTRAINT cases_pkey PRIMARY KEY (case_id);
   ALTER TABLE public.cases ADD CONSTRAINT cases_case_number_key UNIQUE (case_number);

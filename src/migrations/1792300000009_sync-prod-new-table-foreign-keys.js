@@ -642,7 +642,9 @@ $sync$;
 
 DO $sync$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wallet_ledger_award_id_fkey' AND conrelid = to_regclass('public.wallet_ledger')) THEN
+  -- wallet_ledger is obsolete and dropped by 1779900000005; only add the key if a leftover table exists.
+  IF to_regclass('public.wallet_ledger') IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wallet_ledger_award_id_fkey' AND conrelid = to_regclass('public.wallet_ledger')) THEN
 ALTER TABLE ONLY public.wallet_ledger
     ADD CONSTRAINT wallet_ledger_award_id_fkey FOREIGN KEY (award_id) REFERENCES public.loyalty_awards(award_id);
   END IF;
