@@ -12,12 +12,18 @@ exports.up = (pgm) => {
     END $$;
   `);
 
+  // company_id only exists on the legacy Neon table; a fresh database never has it.
   pgm.sql(`
-    UPDATE company_user
-    SET company_id = business_reference::uuid
-    WHERE company_id IS NULL
-      AND business_reference IS NOT NULL
-      AND business_reference ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = 'company_user' AND column_name = 'company_id') THEN
+        UPDATE company_user
+        SET company_id = business_reference::uuid
+        WHERE company_id IS NULL
+          AND business_reference IS NOT NULL
+          AND business_reference ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+      END IF;
+    END $$;
   `);
 };
 

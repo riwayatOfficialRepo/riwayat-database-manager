@@ -12,8 +12,16 @@ exports.up = (pgm) => {
     'audience_rules_staging',
   ];
 
+  // Skip tables that do not exist yet: on a fresh database promotion_target_kitchens/dishes are created
+  // later (1779850000022), and 1779850000044 adds change_in_progress to them.
   for (const table of tables) {
-    pgm.sql(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS change_in_progress boolean NOT NULL DEFAULT false`);
+    pgm.sql(`
+      DO $$ BEGIN
+        IF to_regclass('public.${table}') IS NOT NULL THEN
+          ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS change_in_progress boolean NOT NULL DEFAULT false;
+        END IF;
+      END $$;
+    `);
   }
 };
 
@@ -32,6 +40,6 @@ exports.down = (pgm) => {
   ];
 
   for (const table of tables) {
-    pgm.sql(`ALTER TABLE ${table} DROP COLUMN IF EXISTS change_in_progress`);
+    pgm.sql(`ALTER TABLE IF EXISTS ${table} DROP COLUMN IF EXISTS change_in_progress`);
   }
 };
