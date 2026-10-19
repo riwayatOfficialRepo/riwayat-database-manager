@@ -917,7 +917,8 @@ async function seed() {
         ('customer.profile.update', 'perm.customer.profile.update', 'Initiate profile update'),
         ('customer.profile.delete', 'perm.customer.profile.delete', 'Initiate profile delete'),
         ('customer.kitchen.favorite.add', 'perm.customer.kitchen.favorite.add', 'Mark kitchen favorite'),
-        ('customer.kitchen.favorite.remove', 'perm.customer.kitchen.favorite.remove', 'Unmark kitchen favorite')
+        ('customer.kitchen.favorite.remove', 'perm.customer.kitchen.favorite.remove', 'Unmark kitchen favorite'),
+        ('customer.kitchen.favorite.list', 'perm.customer.kitchen.favorite.list', 'List favorite kitchens')
       ON CONFLICT (key) DO UPDATE SET
         label_key = EXCLUDED.label_key,
         name = EXCLUDED.name;
@@ -1284,7 +1285,7 @@ async function seed() {
     console.log("  ──────────────────────────────────────");
     console.log("  customers:               3 entries");
     console.log("  customer_roles:           1 entry");
-    console.log("  customer_permissions:    17 customer.* + 23 chat.*");
+    console.log("  customer_permissions:    18 customer.* + 23 chat.*");
     console.log(
       "  customer_role_permissions: customer.* + chat on Customer role",
     );
