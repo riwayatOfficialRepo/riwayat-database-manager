@@ -6,6 +6,8 @@
  *
  * dl_ride, dl_delivery, dl_ride_offer and dl_delivery_offer already exist (production schema, see the
  * 1792300000005 sync migration); they are not created or altered here.
+ * Timestamps are timestamp without time zone, like every other dl_* table, so pool times compare directly
+ * with dl_ride / dl_company / offer times.
  * down() drops only the two pool tables.
  */
 
@@ -22,15 +24,15 @@ exports.up = (pgm) => {
       },
       status: { type: 'text', notNull: true, default: 'AVAILABLE', check: `status IN ('AVAILABLE', 'OFFER_PENDING', 'CLAIMED')` },
       upfront_message: { type: 'text' },
-      ride_in_pool_at: { type: 'timestamptz' },
+      ride_in_pool_at: { type: 'timestamp' },
       ride_in_pool_by: { type: 'text' },
       ride_in_pool_details: { type: 'jsonb' },
       escalation_status: { type: 'text' }, // ESCALATED or null
-      escalated_at: { type: 'timestamptz' },
+      escalated_at: { type: 'timestamp' },
       escalated_by_details: { type: 'jsonb' },
       metadata: { type: 'jsonb', default: pgm.func(`'{}'::jsonb`) },
-      created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
-      updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
+      created_at: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+      updated_at: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     },
     { ifNotExists: true },
   );
@@ -49,7 +51,7 @@ exports.up = (pgm) => {
       company_id: { type: 'uuid', references: 'dl_company(delivery_company_id)', onDelete: 'SET NULL' },
       user_id: { type: 'uuid' },
       details: { type: 'jsonb', default: pgm.func(`'{}'::jsonb`) },
-      created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
+      created_at: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     },
     { ifNotExists: true },
   );
