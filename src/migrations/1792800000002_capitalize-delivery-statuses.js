@@ -5,8 +5,12 @@
  *   status of every dl_* table that has one, dl_ride.current_status / assignment_type,
  *   dl_rider_presence.availability_status, dl_rider_cod_wallet.risk_level.
  * Renames: dl_ride.status 'started' -> 'IN_PROGRESS'; dl_ride.assignment_type 'auto_dispatch' -> 'AUTO_ASSIGNED'.
- * CHECKs on the dispatch tables (ride, delivery, offers) are added NOT VALID: they apply to new writes and leave
- * any older value already stored untouched.
+ * dl_delivery_offer.offer_context is uppercased too (no default). Production has the legacy values 'ride' and
+ * 'standalone' from before NEW_RIDE / EXISTING_RIDE / MANUAL_POOL; they become RIDE / STANDALONE and stay allowed
+ * by the CHECK so those offers can still be updated (e.g. expired by the sweep).
+ * CHECKs on the dispatch tables (ride, delivery, offers) are added NOT VALID and then validated: PostgreSQL checks a
+ * NOT VALID constraint on every UPDATE, so an existing row outside the list would otherwise be frozen. Validation
+ * stops the migration instead, naming the constraint, before anything is committed.
  *
  * down() lowercases the same columns and defaults and drops the CHECKs (the two renames are not undone).
  */
@@ -47,7 +51,7 @@ const CHECKS = [
   ['dl_ride_offer', 'dl_ride_offer_status_check', `status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED')`],
   ['dl_delivery_offer', 'dl_delivery_offer_status_check', `status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED')`],
   ['dl_delivery_offer', 'dl_delivery_offer_context_check',
-    `offer_context IS NULL OR offer_context IN ('EXISTING_RIDE', 'NEW_RIDE', 'MANUAL_POOL')`],
+    `offer_context IS NULL OR offer_context IN ('EXISTING_RIDE', 'NEW_RIDE', 'MANUAL_POOL', 'RIDE', 'STANDALONE')`],
 ];
 
 // A table may be missing on a database built before the production schema sync: skip it there.
@@ -67,10 +71,13 @@ exports.up = (pgm) => {
       UPDATE public.${table} SET ${column} = upper(${column}) WHERE ${column} <> upper(${column});
       ALTER TABLE public.${table} ALTER COLUMN ${column} SET DEFAULT '${def}';`));
   }
+  pgm.sql(guarded('dl_delivery_offer', `
+      UPDATE public.dl_delivery_offer SET offer_context = upper(offer_context) WHERE offer_context <> upper(offer_context);`));
   for (const [table, name, check] of CHECKS) {
     pgm.sql(guarded(table, `
       ALTER TABLE public.${table} DROP CONSTRAINT IF EXISTS ${name};
-      ALTER TABLE public.${table} ADD CONSTRAINT ${name} CHECK (${check}) NOT VALID;`));
+      ALTER TABLE public.${table} ADD CONSTRAINT ${name} CHECK (${check}) NOT VALID;
+      ALTER TABLE public.${table} VALIDATE CONSTRAINT ${name};`));
   }
 };
 
